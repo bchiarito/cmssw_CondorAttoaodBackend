@@ -1,0 +1,42 @@
+drop *
+keep nHighPtIdPhoton*
+keep HighPtIdPhoton*
+keep nTwoProng
+keep TwoProng*
+keep RecoPhi*
+keep GenPart*
+keep nGenPart*
+keep GenJet*
+keep nGenJet
+keep MET*
+keep GenMET*
+keep Pileup*
+keep PV*
+keep LHE*
+keep fixedGridRho*
+keep genWeight
+keep event
+keep luminosityBlock
+keep run
+keep dataset_id
+keep flag
+keep nPhoton
+keep Photon_pt
+keep Photon_phi
+keep Photon_eta
+keep Photon_mass
+keep Photon_cutBased
+keep HT
+keep NJets
+keep PV_npvs
+keep htHat*
+
+#notably dropping:
+#jet
+#electron
+#tau
+#trigobj
+#muon
+#hlt
+#l1
+#fatjets

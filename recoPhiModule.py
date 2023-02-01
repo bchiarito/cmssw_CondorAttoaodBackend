@@ -3,6 +3,7 @@ from PhysicsTools.NanoAODTools.postprocessing.framework.eventloop import Module
 import ROOT
 ROOT.PyConfig.IgnoreCommandLineOptions = True
 import math
+import hashlib
 from math import fabs
 
 const_PhotonCutBasedIDMin = 2
@@ -17,13 +18,15 @@ def deltaR(obj1, obj2):
   eta2 = obj2.eta
   dphi = fabs(phi2-phi1)
   if dphi > math.pi: dphi -= 2*math.pi
-  if dphi < math.pi: dphi += 2*math.pi
+  if dphi < -math.pi: dphi += 2*math.pi
   deta = fabs(eta2-eta1)
   return math.sqrt(dphi**2 + deta**2)
 
 class recoPhiModule(Module):
-    def __init__(self, photon):
+    def __init__(self, photon, dataset='', flag=0):
         self.photon = photon
+        self.dataset = dataset
+        self.flag = flag
         # cutflow vars
         self.total = 0
         self.cutflow_pass_photon = 0
@@ -43,11 +46,13 @@ class recoPhiModule(Module):
 
     def beginFile(self, inputFile, outputFile, inputTree, wrappedOutputTree):
         self.out = wrappedOutputTree
+        self.out.branch("dataset_id", "I")
+        self.out.branch("flag", "I")
         self.out.branch("HT", "F")
         self.out.branch("NJets", "I")
         if self.photon == "cutBased": self.cutbasedstr = "CutBased"
         if self.photon == "HPID": self.cutbasedstr = ""
-        self.out.branch(self.cutbasedstr+"RecoPhi_pass", "B")
+        self.out.branch(self.cutbasedstr+"RecoPhi_pass", "I")
         self.out.branch(self.cutbasedstr+"RecoPhi_pt", "F")
         self.out.branch(self.cutbasedstr+"RecoPhi_eta", "F")
         self.out.branch(self.cutbasedstr+"RecoPhi_phi", "F")
@@ -84,28 +89,29 @@ class recoPhiModule(Module):
           if self.photon == "cutBased":
             if photon.cutBased < 2: pass_id = True
           if not pass_id: continue
+          photon_cand = photons[i]
+          photon_vec = ROOT.Math.PtEtaPhiMVector(photon_cand.pt, photon_cand.eta, photon_cand.phi, photon_cand.mass)
           ii = i
           break
         if not ii == -1:
           pass_photon = True
           self.cutflow_pass_photon += 1
-          photon_cand = photons[ii]
-          photon_vec = ROOT.Math.PtEtaPhiMVector(photon_cand.pt, photon_cand.eta, photon_cand.phi, photon_cand.mass)
         jj = -1
         for i, twoprong in enumerate(twoprongs):
           pass_id = False
           if twoprong.pt > 20 and fabs(twoprong.eta)<2.5: pass_id = True
           if not pass_id: continue
-          if pass_photon and deltaR(twoprong, photons[ii]) < 0.1: continue # only check if too close to the leading photon
+          twoprong_cand = twoprongs[i]
+          twoprong_vec = ROOT.Math.PtEtaPhiMVector(twoprong_cand.pt, twoprong_cand.eta, twoprong_cand.phi, twoprong_cand.mass)
+          if pass_photon and ROOT.Math.VectorUtil.DeltaR(photon_vec, twoprong_vec) < 0.1: continue
           jj = i
           break
         if not jj == -1:
           pass_twoprong = True
           self.cutflow_pass_twoprong += 1
-          twoprong_cand = twoprongs[jj]
-          twoprong_vec = ROOT.Math.PtEtaPhiMVector(twoprong_cand.pt, twoprong_cand.eta, twoprong_cand.phi, twoprong_cand.mass)
         if pass_photon and pass_twoprong:
           recophi_vec = twoprong_vec + photon_vec
+          if ROOT.Math.VectorUtil.DeltaR(photon_vec, twoprong_vec) < 0.1: print("hi")
 
         # compute event wide quantities
         HT = 0
@@ -123,6 +129,10 @@ class recoPhiModule(Module):
         recophi_pass = pass_twoprong and pass_photon
 
         # fill branches
+        dataset_id = int(hashlib.sha256((self.dataset).encode('utf-8')).hexdigest(), 16) % 10**8
+        flag = self.flag
+        self.out.fillBranch("dataset_id", dataset_id)
+        self.out.fillBranch("flag", flag)
         self.out.fillBranch("HT", HT)
         self.out.fillBranch("NJets", NJets)
         self.out.fillBranch(self.cutbasedstr+"RecoPhi_pass", recophi_pass)

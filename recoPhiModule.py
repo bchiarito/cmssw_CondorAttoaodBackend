@@ -99,7 +99,7 @@ class recoPhiModule(Module):
         jj = -1
         for i, twoprong in enumerate(twoprongs):
           pass_id = False
-          if twoprong.pt > 20 and fabs(twoprong.eta)<2.5: pass_id = True
+          if twoprong.isTight and twoprong.pt > 20 and fabs(twoprong.eta)<2.5: pass_id = True
           if not pass_id: continue
           twoprong_cand = twoprongs[i]
           twoprong_vec = ROOT.Math.PtEtaPhiMVector(twoprong_cand.pt, twoprong_cand.eta, twoprong_cand.phi, twoprong_cand.mass)

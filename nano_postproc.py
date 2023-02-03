@@ -19,7 +19,6 @@ io_args.add_argument("output", metavar='OUTPUT', help="")
 parser.add_argument("--dataset", default="MyDatasetName", help="name of dataset")
 parser.add_argument("--proc", default=0, type=int, help="integer flag")
 parser.add_argument("--drop", dest="branchsel", default=None, help=".txt file to drop branches")
-#parser.add_argument("--filter", dest="selection", default="None", choices=['None', 'muon', 'photon'], metavar='CHOICE', help="")
 parser.add_argument("--filter", dest="selection", default="None", metavar='CHOICE', help="")
 parser.add_argument("-n", "--numEvents", dest="numEvents", default=-1, type=int, help="")
 parser.add_argument("--add_recophi", default="None", choices=['None', 'HPID', 'cutBased'], metavar='CHOICE', help="")
@@ -76,8 +75,7 @@ files = readFiles
 modules = []
 modules += [simpleCounter(args.report, "TotalEventsProcessed")]
 if args.mc: modules += [mcHatModule()]
-if not args.add_recophi == 'None':
-  modules += [recoPhiModule(args.add_recophi, datasetname, flag)]
+modules += [recoPhiModule(args.add_recophi, datasetname, flag)]
 if not args.selection=="None":
   modules += [simpleSelector(args.selection)]
 modules += [simpleCounter(args.report, "TotalEventsWritten")]

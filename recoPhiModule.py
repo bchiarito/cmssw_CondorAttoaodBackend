@@ -51,7 +51,8 @@ class recoPhiModule(Module):
         self.out.branch("HT", "F")
         self.out.branch("NJets", "I")
         if self.photon == "cutBased": self.cutbasedstr = "CutBased"
-        if self.photon == "HPID": self.cutbasedstr = ""
+        elif self.photon == "HPID": self.cutbasedstr = ""
+        else: self.cutbasedstr = ""
         self.out.branch(self.cutbasedstr+"RecoPhi_pass", "I")
         self.out.branch(self.cutbasedstr+"RecoPhi_pt", "F")
         self.out.branch(self.cutbasedstr+"RecoPhi_eta", "F")
@@ -82,36 +83,38 @@ class recoPhiModule(Module):
         pass_twoprong = False
 
         # reconstruct phi
-        ii = -1
-        for i, photon in enumerate(photons):
-          pass_id = False
-          if self.photon == "HPID": pass_id = True
-          if self.photon == "cutBased":
-            if photon.cutBased < 2: pass_id = True
-          if not pass_id: continue
-          photon_cand = photons[i]
-          photon_vec = ROOT.Math.PtEtaPhiMVector(photon_cand.pt, photon_cand.eta, photon_cand.phi, photon_cand.mass)
-          ii = i
-          break
-        if not ii == -1:
-          pass_photon = True
-          self.cutflow_pass_photon += 1
-        jj = -1
-        for i, twoprong in enumerate(twoprongs):
-          pass_id = False
-          if twoprong.isTight and twoprong.pt > 20 and fabs(twoprong.eta)<2.5: pass_id = True
-          if not pass_id: continue
-          twoprong_cand = twoprongs[i]
-          twoprong_vec = ROOT.Math.PtEtaPhiMVector(twoprong_cand.pt, twoprong_cand.eta, twoprong_cand.phi, twoprong_cand.mass)
-          if pass_photon and ROOT.Math.VectorUtil.DeltaR(photon_vec, twoprong_vec) < 0.1: continue
-          jj = i
-          break
-        if not jj == -1:
-          pass_twoprong = True
-          self.cutflow_pass_twoprong += 1
-        if pass_photon and pass_twoprong:
-          recophi_vec = twoprong_vec + photon_vec
-          if ROOT.Math.VectorUtil.DeltaR(photon_vec, twoprong_vec) < 0.1: print("hi")
+        if not self.photon == "None":
+          ii = -1
+          for i, photon in enumerate(photons):
+            pass_id = False
+            if self.photon == "HPID": pass_id = True
+            if self.photon == "cutBased":
+              if photon.cutBased < 2: pass_id = True
+            if not pass_id: continue
+            photon_cand = photons[i]
+            photon_vec = ROOT.Math.PtEtaPhiMVector(photon_cand.pt, photon_cand.eta, photon_cand.phi, photon_cand.mass)
+            ii = i
+            break
+          if not ii == -1:
+            pass_photon = True
+            self.cutflow_pass_photon += 1
+          jj = -1
+          for i, twoprong in enumerate(twoprongs):
+            pass_id = False
+            if twoprong.isTight and twoprong.pt > 20 and fabs(twoprong.eta)<2.5: pass_id = True
+            if not pass_id: continue
+            twoprong_cand = twoprongs[i]
+            twoprong_vec = ROOT.Math.PtEtaPhiMVector(twoprong_cand.pt, twoprong_cand.eta, twoprong_cand.phi, twoprong_cand.mass)
+            if pass_photon and ROOT.Math.VectorUtil.DeltaR(photon_vec, twoprong_vec) < 0.1: continue
+            jj = i
+            break
+          if not jj == -1:
+            pass_twoprong = True
+            self.cutflow_pass_twoprong += 1
+          if pass_photon and pass_twoprong:
+            recophi_vec = twoprong_vec + photon_vec
+            if ROOT.Math.VectorUtil.DeltaR(photon_vec, twoprong_vec) < 0.1: print("hi")
+          recophi_pass = pass_twoprong and pass_photon
 
         # compute event wide quantities
         HT = 0
@@ -126,7 +129,6 @@ class recoPhiModule(Module):
           HT += jet.pt
           NJets += 1
         
-        recophi_pass = pass_twoprong and pass_photon
 
         # fill branches
         dataset_id = int(hashlib.sha256((self.dataset).encode('utf-8')).hexdigest(), 16) % 10**8
@@ -135,20 +137,21 @@ class recoPhiModule(Module):
         self.out.fillBranch("flag", flag)
         self.out.fillBranch("HT", HT)
         self.out.fillBranch("NJets", NJets)
-        self.out.fillBranch(self.cutbasedstr+"RecoPhi_pass", recophi_pass)
-        if recophi_pass:
-          self.out.fillBranch(self.cutbasedstr+"RecoPhi_pt", recophi_vec.Pt())
-          self.out.fillBranch(self.cutbasedstr+"RecoPhi_eta", recophi_vec.Eta())
-          self.out.fillBranch(self.cutbasedstr+"RecoPhi_phi", recophi_vec.Phi())
-          self.out.fillBranch(self.cutbasedstr+"RecoPhi_mass", recophi_vec.M())
-          self.out.fillBranch(self.cutbasedstr+"RecoPhi_photonLeg_pt", photon_vec.Pt())
-          self.out.fillBranch(self.cutbasedstr+"RecoPhi_photonLeg_eta", photon_vec.Eta())
-          self.out.fillBranch(self.cutbasedstr+"RecoPhi_photonLeg_phi", photon_vec.Phi())
-          self.out.fillBranch(self.cutbasedstr+"RecoPhi_photonLeg_mass", photon_vec.M())
-          self.out.fillBranch(self.cutbasedstr+"RecoPhi_twoprongLeg_pt", twoprong_vec.Pt())
-          self.out.fillBranch(self.cutbasedstr+"RecoPhi_twoprongLeg_eta", twoprong_vec.Eta())
-          self.out.fillBranch(self.cutbasedstr+"RecoPhi_twoprongLeg_phi", twoprong_vec.Phi())
-          self.out.fillBranch(self.cutbasedstr+"RecoPhi_twoprongLeg_mass", twoprong_vec.M())
+        if not self.photon == "None":
+          self.out.fillBranch(self.cutbasedstr+"RecoPhi_pass", recophi_pass)
+          if recophi_pass:
+            self.out.fillBranch(self.cutbasedstr+"RecoPhi_pt", recophi_vec.Pt())
+            self.out.fillBranch(self.cutbasedstr+"RecoPhi_eta", recophi_vec.Eta())
+            self.out.fillBranch(self.cutbasedstr+"RecoPhi_phi", recophi_vec.Phi())
+            self.out.fillBranch(self.cutbasedstr+"RecoPhi_mass", recophi_vec.M())
+            self.out.fillBranch(self.cutbasedstr+"RecoPhi_photonLeg_pt", photon_vec.Pt())
+            self.out.fillBranch(self.cutbasedstr+"RecoPhi_photonLeg_eta", photon_vec.Eta())
+            self.out.fillBranch(self.cutbasedstr+"RecoPhi_photonLeg_phi", photon_vec.Phi())
+            self.out.fillBranch(self.cutbasedstr+"RecoPhi_photonLeg_mass", photon_vec.M())
+            self.out.fillBranch(self.cutbasedstr+"RecoPhi_twoprongLeg_pt", twoprong_vec.Pt())
+            self.out.fillBranch(self.cutbasedstr+"RecoPhi_twoprongLeg_eta", twoprong_vec.Eta())
+            self.out.fillBranch(self.cutbasedstr+"RecoPhi_twoprongLeg_phi", twoprong_vec.Phi())
+            self.out.fillBranch(self.cutbasedstr+"RecoPhi_twoprongLeg_mass", twoprong_vec.M())
         return True
 
 recoPhiConstr_cutBased = lambda: recoPhiModule(photon='cutBased')

@@ -66,6 +66,7 @@ else: raise SystemExit('ERROR: Must specify one of --data / --mc / --sigRes / --
 modules = []
 modules += [simpleCounter(args.report, "TotalEventsProcessed")]
 modules += [baselineModule(datamc, datasetname, flag)]
+modules += [simpleCounter(args.report, "TotalEventsPassDataFilters")]
 if args.mc: modules += [mcHatModule()]
 modules += [recoPhiModule(args.add_recophi)]
 if not args.selection=="None":

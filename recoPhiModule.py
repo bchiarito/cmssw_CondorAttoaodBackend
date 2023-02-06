@@ -6,11 +6,6 @@ import math
 import hashlib
 from math import fabs
 
-const_PhotonCutBasedIDMin = 2
-const_TwoProngMaxEta = 2.5
-const_PhotonMaxEta = 2.5
-const_PairMinDr = 0.1
-
 def deltaR(obj1, obj2):
   phi1 = obj1.phi
   phi2 = obj2.phi
@@ -23,10 +18,8 @@ def deltaR(obj1, obj2):
   return math.sqrt(dphi**2 + deta**2)
 
 class recoPhiModule(Module):
-    def __init__(self, photon, dataset='', flag=0):
+    def __init__(self, photon):
         self.photon = photon
-        self.dataset = dataset
-        self.flag = flag
         # cutflow vars
         self.total = 0
         self.cutflow_pass_photon = 0
@@ -46,8 +39,6 @@ class recoPhiModule(Module):
 
     def beginFile(self, inputFile, outputFile, inputTree, wrappedOutputTree):
         self.out = wrappedOutputTree
-        self.out.branch("dataset_id", "I")
-        self.out.branch("flag", "I")
         self.out.branch("HT", "F")
         self.out.branch("NJets", "I")
         if self.photon == "cutBased": self.cutbasedstr = "CutBased"
@@ -129,12 +120,7 @@ class recoPhiModule(Module):
           HT += jet.pt
           NJets += 1
         
-
         # fill branches
-        dataset_id = int(hashlib.sha256((self.dataset).encode('utf-8')).hexdigest(), 16) % 10**8
-        flag = self.flag
-        self.out.fillBranch("dataset_id", dataset_id)
-        self.out.fillBranch("flag", flag)
         self.out.fillBranch("HT", HT)
         self.out.fillBranch("NJets", NJets)
         if not self.photon == "None":
@@ -154,5 +140,3 @@ class recoPhiModule(Module):
             self.out.fillBranch(self.cutbasedstr+"RecoPhi_twoprongLeg_mass", twoprong_vec.M())
         return True
 
-recoPhiConstr_cutBased = lambda: recoPhiModule(photon='cutBased')
-recoPhiConstr_HPID = lambda: recoPhiModule(photon='HPID')

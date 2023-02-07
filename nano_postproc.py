@@ -79,7 +79,7 @@ p = PostProcessor(args.output,
                   maxEntries=None,
                   totalEntries=args.numEvents,
                   outputbranchsel=args.branchsel,
-                  #fwkJobReport=True,
-                  #haddFileName=args.outfile
+                  fwkJobReport=True,
+                  haddFileName=args.outfile
                   )
 p.run()

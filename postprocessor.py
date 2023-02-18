@@ -163,7 +163,9 @@ class PostProcessor:
 
             # get input tree
             if inFile: inTree = inFile.Get("Events")
-            else: continue
+            else:
+              print('BREAK: tree was dead so skipping...')
+              continue
             if inTree is None:
                 inTree = inFile.Get("Friends")
             remainingEntries = self.totalEntries - totEntriesRead

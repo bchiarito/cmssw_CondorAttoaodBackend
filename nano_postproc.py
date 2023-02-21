@@ -20,7 +20,6 @@ parser.add_argument("--proc", default=0, type=int, help="integer flag")
 parser.add_argument("--drop", dest="branchsel", default=None, help=".txt file to drop branches")
 parser.add_argument("--filter", dest="selection", default="None", metavar='CHOICE', help="")
 parser.add_argument("-n", "--numEvents", dest="numEvents", default=-1, type=int, help="")
-parser.add_argument("--add_recophi", default="None", choices=['None', 'HPID', 'cutBased'], metavar='CHOICE', help="")
 parser.add_argument("--outfile", default="out.root", help="name of final rootfile")
 parser.add_argument("--report", default="report.txt", help="name of intermediate report txt file")
 datamc_options = parser.add_mutually_exclusive_group()
@@ -33,7 +32,7 @@ args = parser.parse_args()
 # import modules
 from PhysicsTools.NanoAODTools.fmk_atto.simpleCounter import simpleCounter
 from PhysicsTools.NanoAODTools.fmk_atto.simpleSelector import simpleSelector
-from PhysicsTools.NanoAODTools.fmk_atto.recoPhiModule import recoPhiModule
+from PhysicsTools.NanoAODTools.fmk_atto.analysisModule import analysisModule
 from PhysicsTools.NanoAODTools.fmk_atto.mcHatModule import mcHatModule
 from PhysicsTools.NanoAODTools.fmk_atto.baselineModule import baselineModule
 
@@ -68,7 +67,7 @@ modules += [simpleCounter(args.report, "TotalEventsProcessed")]
 modules += [baselineModule(datamc, datasetname, flag)]
 modules += [simpleCounter(args.report, "TotalEventsPassDataFilters")]
 if args.mc: modules += [mcHatModule()]
-modules += [recoPhiModule(args.add_recophi)]
+modules += [analysisModule(), analysisModule(cutbased=True)]
 if not args.selection=="None":
   modules += [simpleSelector(args.selection)]
 modules += [simpleCounter(args.report, "TotalEventsWritten")]

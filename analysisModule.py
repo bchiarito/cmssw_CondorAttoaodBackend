@@ -69,7 +69,6 @@ class analysisModule(Module):
             if ROOT.Math.VectorUtil.DeltaR(photon_vec, get_vec(twoprong)) < 0.1: continue
             twoprong_index = i
             pass_twoprong = 'tight'
-            print('found')
             break
           # look for loose
           if twoprong_index == -1:

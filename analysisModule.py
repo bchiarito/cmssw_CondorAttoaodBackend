@@ -31,8 +31,8 @@ class analysisModule(Module):
         self.out.branch(self.cutbasedstr+"RecoPhi_eta", "F")
         self.out.branch(self.cutbasedstr+"RecoPhi_phi", "F")
         self.out.branch(self.cutbasedstr+"RecoPhi_mass", "F")
-        self.out.branch(self.cutbasedstr+"RecoPhi_photonLeg_index", "I")
-        self.out.branch(self.cutbasedstr+"RecoPhi_twoprongLeg_index", "I")
+        self.out.branch(self.cutbasedstr+"RecoPhi_photonindex", "I")
+        self.out.branch(self.cutbasedstr+"RecoPhi_twoprongindex", "I")
 
     def endFile(self, inputFile, outputFile, inputTree, wrappedOutputTree):
         pass
@@ -65,7 +65,11 @@ class analysisModule(Module):
         if pass_photon:
           # look for tight
           for i, twoprong in enumerate(twoprongs):
-            if not (twoprong.isTight and twoprong.pt > 20 and fabs(twoprong.eta)<2.5): continue
+            try:
+              tight = twoprong.isTight
+            except RuntimeError:
+              tight = True
+            if not (tight and twoprong.pt > 20 and fabs(twoprong.eta)<2.5): continue
             if ROOT.Math.VectorUtil.DeltaR(photon_vec, get_vec(twoprong)) < 0.1: continue
             twoprong_index = i
             pass_twoprong = 'tight'
@@ -73,7 +77,11 @@ class analysisModule(Module):
           # look for loose
           if twoprong_index == -1:
             for i, twoprong in enumerate(twoprongs):
-              if not (not twoprong.isTight and twoprong.pt > 20 and fabs(twoprong.eta)<2.5): continue
+              try:
+                tight = twoprong.isTight
+              except RuntimeError:
+                tight = True
+              if not (not tight and twoprong.pt > 20 and fabs(twoprong.eta)<2.5): continue
               if ROOT.Math.VectorUtil.DeltaR(photon_vec, get_vec(twoprong)) < 0.1: continue
               twoprong_index = i
               pass_twoprong = 'loose'
@@ -112,6 +120,6 @@ class analysisModule(Module):
         self.out.fillBranch(self.cutbasedstr+"RecoPhi_eta", recophi_vec.Eta())
         self.out.fillBranch(self.cutbasedstr+"RecoPhi_phi", recophi_vec.Phi())
         self.out.fillBranch(self.cutbasedstr+"RecoPhi_mass", recophi_vec.M())
-        self.out.fillBranch(self.cutbasedstr+"RecoPhi_photonLeg_index", photon_index)
-        self.out.fillBranch(self.cutbasedstr+"RecoPhi_twoprongLeg_index", twoprong_index)
+        self.out.fillBranch(self.cutbasedstr+"RecoPhi_photonindex", photon_index)
+        self.out.fillBranch(self.cutbasedstr+"RecoPhi_twoprongindex", twoprong_index)
         return True

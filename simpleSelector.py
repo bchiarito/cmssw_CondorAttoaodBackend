@@ -1,4 +1,4 @@
-from PhysicsTools.NanoAODTools.postprocessing.framework.datamodel import Collection
+from PhysicsTools.NanoAODTools.postprocessing.framework.datamodel import Collection, Object
 from PhysicsTools.NanoAODTools.postprocessing.framework.eventloop import Module
 import ROOT
 import math
@@ -34,6 +34,9 @@ class simpleSelector(Module):
         photons = Collection(event, "Photon")
         id_photons = Collection(event, "HighPtIdPhoton")
         twoprongs = Collection(event, "TwoProng")
+        recophi = Object(event, "RecoPhi")
+        cb_recophi = Object(event, "CutBased_RecoPhi")
+        pass_trigger = event.HLT_Photon200
         self.total += 1
         if self.sel == 'one_muon':
           if len(muons) == 0 : return False
@@ -46,5 +49,10 @@ class simpleSelector(Module):
         if self.sel == 'bkgEst_allRegions':
           if len(id_photons) == 0 : return False
           if len(twoprongs) == 0 : return False
+        if self.sel == 'full_selection_hpid':
+          if not (event.Region == 1 and id_photons[0].pt > 220 and pass_trigger) : return False
+        if self.sel == 'full_selection_cbl':
+          if not (event.CutBased_Region == 1): return False
+          if not (photons[cb_recophi.photonindex] > 220 and pass_trigger) : return False
         self.passed += 1
         return True

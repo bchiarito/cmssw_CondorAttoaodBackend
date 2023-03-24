@@ -9,7 +9,7 @@ import argparse
 import ROOT
 
 # command line options
-parser = argparse.ArgumentParser(description="", usage="./%(prog)s")
+parser = argparse.ArgumentParser(description="")
 parser.add_argument("report", help=".txt file with metadata report")
 parser.add_argument("rootfile", help="file with Events tree")
 parser.add_argument("dataset", default="MyDatasetName", help="name of dataset")
@@ -56,15 +56,17 @@ reports = parse(report_filename)
 
 print("this many reports:", len(reports))
 for i, d in enumerate(reports):
-  print("  report", i+1)
+  print("report", i+1)
   for key in d:
-    print(key, d[key])
+    print("  ", key, d[key])
 
 for report in reports:
   if report['name'] == 'TotalEventsWritten':
     report_evtWritten = report['count']
   if report['name'] == 'TotalEventsProcessed':
     report_evtProcessed = report['count']
+  if report['name'] == 'TotalEventsPassDataFilters':
+    report_evtPassDatafilter = report['count']
 
 print("adding metadata")
 fi = ROOT.TFile(tree_filename, "update")
@@ -75,6 +77,7 @@ dataset_id = array('i', [ 0 ])
 flag = array('i', [ 0 ])
 evtWritten = array('i', [ 0 ])
 evtProcessed = array('i', [ 0 ])
+evtPassDatafilter = array('i', [ 0 ])
 xs = array('f', [ 0.0 ])
 
 metadata.Branch('dataset', dataset)
@@ -82,6 +85,7 @@ metadata.Branch('dataset_id', dataset_id, 'dataset_id/I')
 metadata.Branch('flag', flag, 'flag/I')
 metadata.Branch('evtWritten', evtWritten, 'evtWritten/I')
 metadata.Branch('evtProcessed', evtProcessed, 'evtProcessed/I')
+metadata.Branch('evtPassDatafilter', evtPassDatafilter, 'evtPassDatafilter/I')
 metadata.Branch('xs', xs, 'xs/F')
 
 dataset.assign(datasetname)
@@ -89,6 +93,7 @@ dataset_id[0] = datasetname_id
 flag[0] = arg_flag
 evtWritten[0] = report_evtWritten
 evtProcessed[0] = report_evtProcessed
+evtPassDatafilter[0] = report_evtPassDatafilter
 xs[0] = args.xs
 
 metadata.Fill()

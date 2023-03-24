@@ -29,7 +29,6 @@ class simpleSelector(Module):
 
     def analyze(self, event):
         """process event, return True (go to next module) or False (fail, go to next event)"""
-        electrons = Collection(event, "Electron")
         muons = Collection(event, "Muon")
         photons = Collection(event, "Photon")
         id_photons = Collection(event, "HighPtIdPhoton")
@@ -39,14 +38,20 @@ class simpleSelector(Module):
         pass_trigger = event.HLT_Photon200
         self.total += 1
         if self.sel == 'one_muon':
+          muons = Collection(event, "Muon")
           if len(muons) == 0 : return False
         if self.sel == 'one_photon':
+          photons = Collection(event, "Photon")
           if len(photons) == 0 : return False
         if self.sel == 'one_hpid_photon':
+          id_photons = Collection(event, "HighPtIdPhoton")
           if len(id_photons) == 0 : return False
         if self.sel == 'hpid_photon_ptcut':
+          id_photons = Collection(event, "HighPtIdPhoton")
           if len(id_photons) == 0 or id_photons[0].pt<30: return False
         if self.sel == 'bkgEst_allRegions':
+          id_photons = Collection(event, "HighPtIdPhoton")
+          twoprongs = Collection(event, "TwoProng")
           if len(id_photons) == 0 : return False
           if len(twoprongs) == 0 : return False
         if self.sel == 'full_selection_hpid':

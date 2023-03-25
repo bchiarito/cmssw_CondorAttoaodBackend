@@ -47,7 +47,7 @@ class analysisModule(Module):
         else: photons = Collection(event, "Photon")
 
         # FIXME sorting should be done upstream
-        twoprongs.sort(reverse=True, key=lambda obj : obj.pt)
+        twoprongs = sorted(twoprongs, reverse=True, key=lambda obj : obj.pt)
 
         # recophi
         pass_photon = False

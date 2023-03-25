@@ -50,14 +50,15 @@ class simpleSelector(Module):
           id_photons = Collection(event, "HighPtIdPhoton")
           if len(id_photons) == 0 or id_photons[0].pt<30: return False
         if self.sel == 'bkgEst_allRegions':
-          id_photons = Collection(event, "HighPtIdPhoton")
-          twoprongs = Collection(event, "TwoProng")
           if len(id_photons) == 0 : return False
           if len(twoprongs) == 0 : return False
         if self.sel == 'full_selection_hpid':
-          if not (event.Region == 1 and id_photons[0].pt > 220 and pass_trigger) : return False
+          if not event.Region == 1: return False
+          if not pass_trigger: return False
+          if not (id_photons[recophi.photonindex].pt > 220) : return False
         if self.sel == 'full_selection_cbl':
           if not (event.CutBased_Region == 1): return False
-          if not (photons[cb_recophi.photonindex] > 220 and pass_trigger) : return False
+          if not pass_trigger: return False
+          if not (photons[cb_recophi.photonindex].pt > 220) : return False
         self.passed += 1
         return True

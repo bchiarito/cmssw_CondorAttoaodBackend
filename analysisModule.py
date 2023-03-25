@@ -6,6 +6,8 @@ import math
 import hashlib
 from math import fabs
 
+PHOTON_CUTBASED_ID = 0 # loose
+
 def get_vec(obj):
   return ROOT.Math.PtEtaPhiMVector(obj.pt, obj.eta, obj.phi, obj.mass)
 
@@ -44,6 +46,9 @@ class analysisModule(Module):
         if not self.cutbased: photons = Collection(event, "HighPtIdPhoton")
         else: photons = Collection(event, "Photon")
 
+        # FIXME sorting should be done upstream
+        twoprongs.sort(reverse=True, key=lambda obj : obj.pt)
+
         # recophi
         pass_photon = False
         pass_twoprong = ''
@@ -51,7 +56,7 @@ class analysisModule(Module):
         twoprong_index = -1
         if self.cutbased:
           for i, photon in enumerate(photons):
-            if photon.cutBased >= 2: continue
+            if photon.cutBased <= PHOTON_CUTBASED_ID: continue
             pass_photon = True
             photon_index = i
             cutbased_photon_index = i

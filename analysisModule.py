@@ -59,7 +59,6 @@ class analysisModule(Module):
             if photon.cutBased <= PHOTON_CUTBASED_ID: continue
             pass_photon = True
             photon_index = i
-            cutbased_photon_index = i
             photon_vec = ROOT.Math.PtEtaPhiMVector(photon.pt, photon.eta, photon.phi, photon.mass)
             break
         else:

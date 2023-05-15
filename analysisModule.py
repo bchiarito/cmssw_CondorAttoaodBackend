@@ -57,6 +57,7 @@ class analysisModule(Module):
         if self.cutbased:
           for i, photon in enumerate(photons):
             if photon.cutBased <= PHOTON_CUTBASED_ID: continue
+            if abs(photon.scEta) > 1.4442: continue
             pass_photon = True
             photon_index = i
             photon_vec = ROOT.Math.PtEtaPhiMVector(photon.pt, photon.eta, photon.phi, photon.mass)

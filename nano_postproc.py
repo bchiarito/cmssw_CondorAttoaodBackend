@@ -35,6 +35,7 @@ from PhysicsTools.NanoAODTools.fmk_atto.simpleSelector import simpleSelector
 from PhysicsTools.NanoAODTools.fmk_atto.analysisModule import analysisModule
 from PhysicsTools.NanoAODTools.fmk_atto.mcHatModule import mcHatModule
 from PhysicsTools.NanoAODTools.fmk_atto.baselineModule import baselineModule
+from PhysicsTools.NanoAODTools.fmk_atto.PDFUncertaintyProducer import PDFUncertaintyProducer
 
 if os.path.isfile(args.input) and args.input[-5:] == '.root':
   files = [args.input]
@@ -63,6 +64,7 @@ else: raise SystemExit('ERROR: Must specify one of --data / --mc / --sigRes / --
 
 # modules
 modules = []
+#modules += [PDFUncertaintyProducer(False, False)]
 modules += [simpleCounter(args.report, "TotalEventsProcessed")]
 modules += [baselineModule(datamc, datasetname, flag)]
 modules += [simpleCounter(args.report, "TotalEventsPassDataFilters")]

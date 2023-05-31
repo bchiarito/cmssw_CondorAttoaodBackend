@@ -6,7 +6,14 @@ import math
 import hashlib
 from math import fabs
 
-PHOTON_CUTBASED_ID = 0 # loose
+PHOTON_CUTBASED_ID = 1 # loose
+PHOTON_BARREL_ETA = 1.4442
+PHOTON_MIN_PT = 35 # b/c HLT_Photon35_Twoprongs35
+PHOTON_HoverE_CUT = 0.04596
+
+MIN_DR = 0.1 # between photon and twoprong
+
+TWOPRONG_MIN_PT = 20
 
 def get_vec(obj):
   return ROOT.Math.PtEtaPhiMVector(obj.pt, obj.eta, obj.phi, obj.mass)
@@ -59,56 +66,86 @@ class analysisModule(Module):
         # FIXME sorting should be done upstream
         twoprongs = sorted(twoprongs, reverse=True, key=lambda obj : obj.pt)
 
-        # recophi
+        # find photon
         pass_photon = False
-        pass_twoprong = ''
+        photon_region = ''
         photon_index = -1
-        twoprong_index = -1
         if self.cutbased:
+          # priority for tight
           for i, photon in enumerate(photons):
-            if photon.cutBased <= PHOTON_CUTBASED_ID: continue
-            if abs(photon.scEta) > 1.4442: continue
-            pass_photon = True
+            if photon.cutBased < PHOTON_CUTBASED_ID: continue
+            if abs(photon.scEta) > PHOTON_BARREL_ETA: continue
+            if photon.pt <= PHOTON_MIN_PT: continue
+            if photon.hadTowOverEm > PHOTON_HoverE_CUT: continue
+            photon_region = 'tight'
             photon_index = i
-            photon_vec = ROOT.Math.PtEtaPhiMVector(photon.pt, photon.eta, photon.phi, photon.mass)
-            break
-        else:
-          if len(photons) >= 1:
             pass_photon = True
-            photon_index = 0
-            photon_vec = get_vec(photons[0])
-        if pass_photon:
-          # look for tight
-          for i, twoprong in enumerate(twoprongs):
-            try:
-              tight = twoprong.isTight
-            except RuntimeError:
-              tight = True
-            if not (tight and twoprong.pt > 20 and fabs(twoprong.eta)<2.5): continue
-            if ROOT.Math.VectorUtil.DeltaR(photon_vec, get_vec(twoprong)) < 0.1: continue
-            twoprong_index = i
-            pass_twoprong = 'tight'
             break
-          # look for loose
-          if twoprong_index == -1:
-            for i, twoprong in enumerate(twoprongs):
-              try:
-                tight = twoprong.isTight
-              except RuntimeError:
-                tight = True
-              if not (not tight and twoprong.pt > 20 and fabs(twoprong.eta)<2.5): continue
-              if ROOT.Math.VectorUtil.DeltaR(photon_vec, get_vec(twoprong)) < 0.1: continue
-              twoprong_index = i
-              pass_twoprong = 'loose'
+          # try to find loose
+          if photon_index == -1:
+            for i, photon in enumerate(photons):
+              if abs(photon.scEta) > PHOTON_BARREL_ETA: continue
+              if photon.pt <= PHOTON_MIN_PT: continue
+              if photon.hadTowOverEm > PHOTON_HoverE_CUT: continue
+              photon_region = 'loose'
+              photon_index = i
+              pass_photon = True
               break
-        if pass_photon and pass_twoprong == 'tight':
-          region = 1
-          recophi_vec = get_vec(twoprongs[twoprong_index]) + photon_vec
-        elif pass_photon and pass_twoprong == 'loose':
-          region = 2
-          recophi_vec = get_vec(twoprongs[twoprong_index]) + photon_vec
         else:
-          region = 0
+          for i, photon in enumerate(photons):
+            if abs(photon.scEta) > PHOTON_BARREL_ETA: continue
+            if photon.pt <= PHOTON_MIN_PT: continue
+            photon_region = 'tight'
+            photon_index = i
+            pass_photon = True
+            break
+        
+        # find twoprong
+        pass_twoprong = False
+        twoprong_region = ''
+        twoprong_index = -1
+        TT = []
+        TL = []
+        LT = []
+        LL = []
+        if not photon_index == -1:
+          for i, twoprong in enumerate(twoprongs):
+            if twoprong.pt < TWOPRONG_MIN_PT: continue
+            if ROOT.Math.VectorUtil.DeltaR(get_vec(twoprong), get_vec(photons[photon_index])) < MIN_DR: continue
+            if twoprong.isTight: TT.append((i, twoprong))
+            if twoprong.passIso and not twoprong.passSym: TL.append((i, twoprong))
+            if not twoprong.passIso and twoprong.passSym: LT.append((i, twoprong))
+            if not twoprong.passIso and not twoprong.passSym: LL.append((i, twoprong))
+        if len(TT) > 0:
+          pass_twoprong = True
+          twoprong_region = 'tight'
+          twoprong_index = TT[0][0]
+        elif len(TL) > 0:
+          pass_twoprong = True
+          twoprong_region = 'iso_asym'
+          twoprong_index = TL[0][0]
+        elif len(LT) > 0:
+          pass_twoprong = True
+          twoprong_region = 'noniso_sym'
+          twoprong_index = LT[0][0]
+        elif len(LL) > 0:
+          pass_twoprong = True
+          twoprong_region = 'noniso_asym'
+          twoprong_index = LL[0][0]
+
+        if photon_region == '' or twoprong_region == '': region = 0
+        elif photon_region == 'tight' and twoprong_region == 'tight': region = 1
+        elif photon_region == 'tight' and twoprong_region == 'iso_asym': region = 2
+        elif photon_region == 'tight' and twoprong_region == 'noniso_sym': region = 3
+        elif photon_region == 'tight' and twoprong_region == 'noniso_asym': region = 4
+        elif photon_region == 'loose' and twoprong_region == 'tight': region = 11
+        elif photon_region == 'loose' and twoprong_region == 'iso_asym': region = 12
+        elif photon_region == 'loose' and twoprong_region == 'noniso_sym': region = 13
+        elif photon_region == 'loose' and twoprong_region == 'noniso_asym': region = 14
+
+        if region > 0:
+          recophi_vec = get_vec(twoprongs[twoprong_index]) + get_vec(photons[photon_index])
+        else:
           recophi_vec = ROOT.Math.PtEtaPhiMVector(0, 0, 0, 0)
 
         # event wide quantities

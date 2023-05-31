@@ -15,8 +15,8 @@ class analysisModule(Module):
     def __init__(self, selection_type="", cutbased=False):
         self.selection_type = selection_type # for future, high pt / low pt selection
         self.cutbased = cutbased
-        if cutbased: self.cutbasedstr = "CutBased_"
-        else: self.cutbasedstr = ""
+        if cutbased: self.photon_type = "CBL_"
+        else: self.photon_type = "HPID_"
 
     def beginJob(self):
         pass
@@ -26,15 +26,25 @@ class analysisModule(Module):
 
     def beginFile(self, inputFile, outputFile, inputTree, wrappedOutputTree):
         self.out = wrappedOutputTree
-        self.out.branch(self.cutbasedstr+"HT", "F")
-        self.out.branch(self.cutbasedstr+"NJets", "I")
-        self.out.branch(self.cutbasedstr+"Region", "I")
-        self.out.branch(self.cutbasedstr+"RecoPhi_pt", "F")
-        self.out.branch(self.cutbasedstr+"RecoPhi_eta", "F")
-        self.out.branch(self.cutbasedstr+"RecoPhi_phi", "F")
-        self.out.branch(self.cutbasedstr+"RecoPhi_mass", "F")
-        self.out.branch(self.cutbasedstr+"RecoPhi_photonindex", "I")
-        self.out.branch(self.cutbasedstr+"RecoPhi_twoprongindex", "I")
+        self.out.branch(self.photon_type+"HT", "F")
+        self.out.branch(self.photon_type+"NJets", "I")
+        self.out.branch(self.photon_type+"Region", "I")
+        self.out.branch(self.photon_type+"RecoPhi_pt", "F")
+        self.out.branch(self.photon_type+"RecoPhi_eta", "F")
+        self.out.branch(self.photon_type+"RecoPhi_phi", "F")
+        self.out.branch(self.photon_type+"RecoPhi_mass", "F")
+        self.out.branch(self.photon_type+"RecoPhi_photonindex", "I")
+        self.out.branch(self.photon_type+"RecoPhi_twoprongindex", "I")
+        self.out.branch(self.photon_type+"RecoPhi_TwoProng_pt", "F")
+        self.out.branch(self.photon_type+"RecoPhi_TwoProng_eta", "F")
+        self.out.branch(self.photon_type+"RecoPhi_TwoProng_phi", "F")
+        self.out.branch(self.photon_type+"RecoPhi_TwoProng_mass", "F")
+        self.out.branch(self.photon_type+"RecoPhi_TwoProng_massPi0", "F")
+        self.out.branch(self.photon_type+"RecoPhi_TwoProng_massEta", "F")
+        self.out.branch(self.photon_type+"RecoPhi_Photon_pt", "F")
+        self.out.branch(self.photon_type+"RecoPhi_Photon_eta", "F")
+        self.out.branch(self.photon_type+"RecoPhi_Photon_phi", "F")
+        self.out.branch(self.photon_type+"RecoPhi_Photon_mass", "F")
 
     def endFile(self, inputFile, outputFile, inputTree, wrappedOutputTree):
         pass
@@ -118,13 +128,38 @@ class analysisModule(Module):
         if pass_twoprong: HT += twoprongs[twoprong_index].pt
 
         # fill branches
-        self.out.fillBranch(self.cutbasedstr+"HT", HT)
-        self.out.fillBranch(self.cutbasedstr+"NJets", NJets)
-        self.out.fillBranch(self.cutbasedstr+"Region", region)
-        self.out.fillBranch(self.cutbasedstr+"RecoPhi_pt", recophi_vec.Pt())
-        self.out.fillBranch(self.cutbasedstr+"RecoPhi_eta", recophi_vec.Eta())
-        self.out.fillBranch(self.cutbasedstr+"RecoPhi_phi", recophi_vec.Phi())
-        self.out.fillBranch(self.cutbasedstr+"RecoPhi_mass", recophi_vec.M())
-        self.out.fillBranch(self.cutbasedstr+"RecoPhi_photonindex", photon_index)
-        self.out.fillBranch(self.cutbasedstr+"RecoPhi_twoprongindex", twoprong_index)
+        self.out.fillBranch(self.photon_type+"HT", HT)
+        self.out.fillBranch(self.photon_type+"NJets", NJets)
+        self.out.fillBranch(self.photon_type+"Region", region)
+        self.out.fillBranch(self.photon_type+"RecoPhi_pt", recophi_vec.Pt())
+        self.out.fillBranch(self.photon_type+"RecoPhi_eta", recophi_vec.Eta())
+        self.out.fillBranch(self.photon_type+"RecoPhi_phi", recophi_vec.Phi())
+        self.out.fillBranch(self.photon_type+"RecoPhi_mass", recophi_vec.M())
+        self.out.fillBranch(self.photon_type+"RecoPhi_photonindex", photon_index)
+        self.out.fillBranch(self.photon_type+"RecoPhi_twoprongindex", twoprong_index)
+        if not twoprong_index == -1:
+          self.out.fillBranch(self.photon_type+"RecoPhi_TwoProng_pt", twoprongs[twoprong_index].pt)
+          self.out.fillBranch(self.photon_type+"RecoPhi_TwoProng_eta", twoprongs[twoprong_index].eta)
+          self.out.fillBranch(self.photon_type+"RecoPhi_TwoProng_phi", twoprongs[twoprong_index].phi)
+          self.out.fillBranch(self.photon_type+"RecoPhi_TwoProng_mass", twoprongs[twoprong_index].mass)
+          self.out.fillBranch(self.photon_type+"RecoPhi_TwoProng_massPi0", twoprongs[twoprong_index].massPi0)
+          self.out.fillBranch(self.photon_type+"RecoPhi_TwoProng_massEta", twoprongs[twoprong_index].massEta)
+        else:
+          self.out.fillBranch(self.photon_type+"RecoPhi_TwoProng_pt", -1)
+          self.out.fillBranch(self.photon_type+"RecoPhi_TwoProng_eta", -1)
+          self.out.fillBranch(self.photon_type+"RecoPhi_TwoProng_phi", -1)
+          self.out.fillBranch(self.photon_type+"RecoPhi_TwoProng_mass", -1)
+          self.out.fillBranch(self.photon_type+"RecoPhi_TwoProng_massPi0", -1)
+          self.out.fillBranch(self.photon_type+"RecoPhi_TwoProng_massEta", -1)
+        if not photon_index == -1:
+          self.out.fillBranch(self.photon_type+"RecoPhi_Photon_pt", photons[photon_index].pt)
+          self.out.fillBranch(self.photon_type+"RecoPhi_Photon_eta", photons[photon_index].eta)
+          self.out.fillBranch(self.photon_type+"RecoPhi_Photon_phi", photons[photon_index].phi)
+          self.out.fillBranch(self.photon_type+"RecoPhi_Photon_mass", photons[photon_index].mass)
+        else:
+          self.out.fillBranch(self.photon_type+"RecoPhi_Photon_pt", -1)
+          self.out.fillBranch(self.photon_type+"RecoPhi_Photon_eta", -1)
+          self.out.fillBranch(self.photon_type+"RecoPhi_Photon_phi", -1)
+          self.out.fillBranch(self.photon_type+"RecoPhi_Photon_mass", -1)
+          
         return True

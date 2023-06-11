@@ -48,9 +48,9 @@ class baselineModule(Module):
         self.out.fillBranch("dataset_id", dataset_id)
         self.out.fillBranch("flag", flag)
 
-        # filter descion for data and signal mc
+        # filter decision for data
         pass_filters = False
-        if self.datamc == 'data' or self.datamc == 'sigRes' or self.datamc == 'sigNonRes':
+        if self.datamc == 'data':
           if flags.goodVertices and \
             flags.globalSuperTightHalo2016Filter and \
             flags.HBHENoiseFilter and \

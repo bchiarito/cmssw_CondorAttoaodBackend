@@ -112,10 +112,13 @@ class analysisModule(Module):
           for i, twoprong in enumerate(twoprongs):
             if twoprong.pt < TWOPRONG_MIN_PT: continue
             if ROOT.Math.VectorUtil.DeltaR(get_vec(twoprong), get_vec(photons[photon_index])) < MIN_DR: continue
-            if twoprong.isTight: TT.append((i, twoprong))
-            if twoprong.passIso and not twoprong.passSym: TL.append((i, twoprong))
-            if not twoprong.passIso and twoprong.passSym: LT.append((i, twoprong))
-            if not twoprong.passIso and not twoprong.passSym: LL.append((i, twoprong))
+            try:
+              if twoprong.isTight: TT.append((i, twoprong))
+              if twoprong.passIso and not twoprong.passSym: TL.append((i, twoprong))
+              if not twoprong.passIso and twoprong.passSym: LT.append((i, twoprong))
+              if not twoprong.passIso and not twoprong.passSym: LL.append((i, twoprong))
+            except RuntimeError:
+              TT.append((i, twoprong))
         if len(TT) > 0:
           pass_twoprong = True
           twoprong_region = 'tight'

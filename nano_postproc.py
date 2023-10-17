@@ -22,12 +22,14 @@ parser.add_argument("--filter", dest="selection", default="None", metavar='CHOIC
 parser.add_argument("-n", "--numEvents", dest="numEvents", default=-1, type=int, help="")
 parser.add_argument("--outfile", default="out.root", help="name of final rootfile")
 parser.add_argument("--report", default="report.txt", help="name of intermediate report txt file")
+parser.add_argument("--analyzer", default="", help='')
 datamc_options = parser.add_mutually_exclusive_group()
 datamc_options.add_argument("--data", action="store_true", default=False, help="running on data")
 datamc_options.add_argument("--mc", action="store_true", default=False, help="running on bkg mc")
 datamc_options.add_argument("--sigRes", action="store_true", default=False, help="running on resonant signal mc")
 datamc_options.add_argument("--sigNonRes", action="store_true", default=False, help="running on nonresonant signal mc")
 args = parser.parse_args()
+
 
 # import modules
 from PhysicsTools.NanoAODTools.fmk_atto.simpleCounter import simpleCounter
@@ -36,6 +38,10 @@ from PhysicsTools.NanoAODTools.fmk_atto.analysisModule import analysisModule
 from PhysicsTools.NanoAODTools.fmk_atto.mcHatModule import mcHatModule
 from PhysicsTools.NanoAODTools.fmk_atto.baselineModule import baselineModule
 from PhysicsTools.NanoAODTools.fmk_atto.PDFUncertaintyProducer import PDFUncertaintyProducer
+from PhysicsTools.NanoAODTools.fmk_atto.ZttModule import zttModule
+
+# temporary
+tags = [1,2018,1] ## data=0 mc=1 , year, mc number (-1 if data)
 
 if os.path.isfile(args.input) and args.input[-5:] == '.root':
   files = [args.input]
@@ -69,7 +75,8 @@ modules += [simpleCounter(args.report, "TotalEventsProcessed")]
 modules += [baselineModule(datamc, datasetname, flag)]
 modules += [simpleCounter(args.report, "TotalEventsPassDataFilters")]
 if args.mc: modules += [mcHatModule()]
-modules += [analysisModule(), analysisModule(cutbased=True)]
+if args.analyzer == 'main': modules += [analysisModule(), analysisModule(cutbased=True)]
+if args.analyzer == 'ztt': modules += [zttModule(tags)]
 if not args.selection=="None":
   modules += [simpleSelector(args.selection)]
 modules += [simpleCounter(args.report, "TotalEventsWritten")]

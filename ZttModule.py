@@ -52,7 +52,7 @@ class zttModule(Module):
 		else: 
 			print("No MC Dataset with number {} found. Run will not have proper scale factors.".format(self.mcnum))
 			self.datasetscalefactor=1		
-	
+	else: self.datasetscalefactor = 1 	
 	rc = ctypes.CDLL('/cms/smd376/CMSSW_11_1_0/src/RocWrapper.so')
 	print(rc)
 	roccorfile = "/cms/smd376/CMSSW_11_1_0/src/PhysicsTools/NanoAODTools/python/postprocessing/data/roccor.Run2.v3/RoccoR2018.txt"

@@ -49,6 +49,7 @@ class baselineModule(Module):
         self.out.fillBranch("flag", flag)
 
         # filter decision for data
+        '''
         pass_filters = False
         if self.datamc == 'data':
           if flags.goodVertices and \
@@ -63,4 +64,6 @@ class baselineModule(Module):
           return pass_filters
         else:
           return True
+        '''
+        return True
 

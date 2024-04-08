@@ -52,6 +52,7 @@ class analysisModule(Module):
         self.out.branch(self.photon_type+"RecoPhi_Photon_eta", "F")
         self.out.branch(self.photon_type+"RecoPhi_Photon_phi", "F")
         self.out.branch(self.photon_type+"RecoPhi_Photon_mass", "F")
+        self.out.branch("weight_signalHEMscale", "F")
 
     def endFile(self, inputFile, outputFile, inputTree, wrappedOutputTree):
         pass
@@ -146,10 +147,6 @@ class analysisModule(Module):
         elif photon_region == 'loose' and twoprong_region == 'noniso_sym': region = 13
         elif photon_region == 'loose' and twoprong_region == 'noniso_asym': region = 14
 
-        if region > 0:
-          recophi_vec = get_vec(twoprongs[twoprong_index]) + get_vec(photons[photon_index])
-        else:
-          recophi_vec = ROOT.Math.PtEtaPhiMVector(0, 0, 0, 0)
 
         # event wide quantities
         HT = 0
@@ -167,7 +164,17 @@ class analysisModule(Module):
         if pass_photon: HT += photons[photon_index].pt
         if pass_twoprong: HT += twoprongs[twoprong_index].pt
 
+        weight_signalHEMscale = 1.0
+        if region > 0:
+          recophi_vec = get_vec(twoprongs[twoprong_index]) + get_vec(photons[photon_index])
+          if twoprong_vec.Phi() > -1.57 and twoprong_vec.Phi() < -0.87 and \
+             twoprong_vec.Eta() > -3.0 and twoprong_vec.Eta() < -1.4:
+               weight_signalHEMscale = 0.35
+        else:
+          recophi_vec = ROOT.Math.PtEtaPhiMVector(0, 0, 0, 0)
+
         # fill branches
+        self.out.fillBranch("weight_signalHEMscale", weight_signalHEMscale)
         self.out.fillBranch(self.photon_type+"HT", HT)
         self.out.fillBranch(self.photon_type+"NJets", NJets)
         self.out.fillBranch(self.photon_type+"Region", region)

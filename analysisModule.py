@@ -64,9 +64,6 @@ class analysisModule(Module):
         if not self.cutbased: photons = Collection(event, "HighPtIdPhoton")
         else: photons = Collection(event, "Photon")
 
-        # FIXME sorting should be done upstream
-        twoprongs = sorted(twoprongs, reverse=True, key=lambda obj : obj.pt)
-
         # find photon
         pass_photon = False
         photon_region = ''

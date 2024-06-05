@@ -39,6 +39,7 @@ from PhysicsTools.NanoAODTools.fmk_atto.mcHatModule import mcHatModule
 from PhysicsTools.NanoAODTools.fmk_atto.baselineModule import baselineModule
 from PhysicsTools.NanoAODTools.fmk_atto.PDFUncertaintyProducer import PDFUncertaintyProducer
 from PhysicsTools.NanoAODTools.fmk_atto.ZttModule import zttModule
+from PhysicsTools.NanoAODTools.fmk_atto.triggerModule import triggerModule
 
 # temporary
 tags = [1,2018,1] ## data=0 mc=1 , year, mc number (-1 if data)
@@ -77,6 +78,7 @@ modules += [simpleCounter(args.report, "TotalEventsPassDataFilters")]
 if args.mc: modules += [mcHatModule()]
 if args.analyzer == 'main': modules += [analysisModule(), analysisModule(cutbased=True)]
 if args.analyzer == 'ztt': modules += [zttModule(tags)]
+if args.analyzer == 'trigger': modules += [triggerModule(year="2018", filters_off=False)]
 if not args.selection=="None":
   modules += [simpleSelector(args.selection)]
 modules += [simpleCounter(args.report, "TotalEventsWritten")]

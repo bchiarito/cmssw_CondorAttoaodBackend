@@ -424,7 +424,7 @@ class zttModule(Module):
 	#Jet Correction
 	for i, jet in enumerate(jets):
 		PassJetCleaner = Jet_Cleaner(jet, GoodTau, GoodMuon)
-		if !PassJetCleaner: jetskips+=1 
+		if PassJetCleaner==False: jetskips+=1 
 
 	GnJets = nJet - jetskips
 	nrandom=np.random.random()

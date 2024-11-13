@@ -38,11 +38,11 @@ from PhysicsTools.NanoAODTools.fmk_atto.analysisModule import analysisModule
 from PhysicsTools.NanoAODTools.fmk_atto.mcHatModule import mcHatModule
 from PhysicsTools.NanoAODTools.fmk_atto.baselineModule import baselineModule
 from PhysicsTools.NanoAODTools.fmk_atto.PDFUncertaintyProducer import PDFUncertaintyProducer
-from PhysicsTools.NanoAODTools.fmk_atto.ZttModule import zttModule
 from PhysicsTools.NanoAODTools.fmk_atto.triggerModule import triggerModule
+from PhysicsTools.NanoAODTools.fmk_atto.ZttModule_muon_muon import zttModule
 
 # temporary
-tags = [1,2018,1] ## data=0 mc=1 , year, mc number (-1 if data)
+tags = [0,2018,-1,1] ## data=0 mc=1 ,run year, mc number (-1 if data), antiiso = 1 iso = 0 (iso is normal run + same sign , anti iso is to get the same and opposite sign candidates in the anti iso region for ratio)
 
 if os.path.isfile(args.input) and args.input[-5:] == '.root':
   files = [args.input]

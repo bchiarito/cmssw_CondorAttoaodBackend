@@ -23,6 +23,7 @@ parser.add_argument("-n", "--numEvents", dest="numEvents", default=-1, type=int,
 parser.add_argument("--outfile", default="out.root", help="name of final rootfile")
 parser.add_argument("--report", default="report.txt", help="name of intermediate report txt file")
 parser.add_argument("--analyzer", default="", help='')
+parser.add_argument("--lumimask", default="None", help='')
 datamc_options = parser.add_mutually_exclusive_group()
 datamc_options.add_argument("--data", action="store_true", default=False, help="running on data")
 datamc_options.add_argument("--mc", action="store_true", default=False, help="running on bkg mc")
@@ -83,6 +84,8 @@ if not args.selection=="None":
   modules += [simpleSelector(args.selection)]
 modules += [simpleCounter(args.report, "TotalEventsWritten")]
 
+print(args.lumimask)
+
 p = PostProcessor(args.output,
                   files,
                   modules=modules,
@@ -90,6 +93,7 @@ p = PostProcessor(args.output,
                   totalEntries=args.numEvents,
                   outputbranchsel=args.branchsel,
                   fwkJobReport=True,
+                  jsonInput=args.lumimask if args.lumimask != "None" else None,
                   haddFileName=args.outfile
                   )
 p.run()

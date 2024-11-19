@@ -146,13 +146,6 @@ class zttModule(Module):
         self.out.branch("GTwoProng_massl", "F")
         self.out.branch("GTwoProng_massPi0", "F")
         self.out.branch("GTwoProng_massEta", "F")
-	self.out.branch("GEventsRunOver","I")
-#	self.out.branch("GMCTC","I")
-	self.out.branch("GChpospt","D")
-	self.out.branch("GChnegpt","D")
-	self.out.branch("GChextra_charge","D")
-	self.out.branch("GPZeta_Tau","D")
-	self.out.branch("GPZeta_TP","D")
 
  	self.out.branch("GnMuon", "I")
         self.out.branch("GMuon_pt", "F")
@@ -173,6 +166,31 @@ class zttModule(Module):
 	self.out.branch("GNPV","D")
 	self.out.branch("GnElectron", "I")
 
+	self.out.branch("GEventsRunOver","I")
+
+	self.out.branch("GChpospt","D")
+	self.out.branch("GChnegpt","D")
+	self.out.branch("GChextra_charge","D")
+
+	self.out.branch("GTPnTracks","D")
+	self.out.branch("GMET","D")
+	self.out.branch("GPileup_nTrueInt","D")
+
+	self.out.branch("nMuons","D")
+	self.out.branch("nTaus","D")
+	self.out.branch("nJets","D")
+
+	self.out.branch("GMuon_pt_tpcheck","D")
+
+	self.out.branch("GJet_pt","D")
+	self.out.branch("GJet_eta","D")
+	self.out.branch("GJet_phi","D")
+	self.out.branch("GJet_mass","D")
+
+        ###
+
+	self.out.branch("GPZeta_Tau","D")
+	self.out.branch("GPZeta_TP","D")
 	self.out.branch("Z_massTau","D")
     	self.out.branch("Z_ptTau","D")
     	self.out.branch("Z_phiTau","D")
@@ -181,11 +199,52 @@ class zttModule(Module):
     	self.out.branch("Z_ptTP","D")
     	self.out.branch("Z_phiTP","D")
     	self.out.branch("Z_etaTP","D")
+	self.out.branch("TPTauDeltaR","D")
+	self.out.branch("GnJets_corrected","D")
+    	self.out.branch("Ght","D")
+	self.out.branch("GTransMass","D")
+
+	self.out.branch("GSF_central","D")
+	self.out.branch("GSF_plus","D")
+	self.out.branch("GSF_minus","D")
+	self.out.branch("GSF_pileup_central","D")
+        self.out.branch("GSF_pileup_plus","D")
+        self.out.branch("GSF_pileup_minus","D")
+        self.out.branch("GSF_id_iso_trig","D")
+	self.out.branch("GSF_rochester","D")
+	self.out.branch("GSF_dataset","D")
+    	self.out.branch("GSF_HEM","D")
+
+        ###
+
+        self.ver = 'VerTau_'
+
+	self.out.branch(self.ver+"RegionIso","D")
+	self.out.branch(self.ver+"RegionOSSS","D")
+
+	self.out.branch(self.ver+"Zvis_pt","D")
+	self.out.branch(self.ver+"Zvis_eta","D")
+	self.out.branch(self.ver+"Zvis_phi","D")
+	self.out.branch(self.ver+"Zvis_mass","D")
+	self.out.branch(self.ver+"Zvis_dR","D")
+
+	self.out.branch(self.ver+"Index_tauobj","D")
+	self.out.branch(self.ver+"Index_muon","D")
+
+	self.out.branch(self.ver+"cut_Pzeta","D")
+	self.out.branch(self.ver+"cut_MT","D")
+
+	#self.out.branch(self.ver+"HT","D")
+	#self.out.branch(self.ver+"nJets","D")
+
+        # code snippet in case array branches are needed
+        #self.out.branch("n"+"", "I")
+        #self.out.branch(""+"_pt", "F", lenVar="n"+"")
+
+#	self.out.branch("GMCTC","I")
 #	self.out.branch("Z_massTPIso","D")
 #	self.out.branch("Z_massTP3track","D")
 #	self.out.branch("Z_massMuonMuon","D")
-
-
 
 #	self.out.branch("GTau_iso_pt","D")
 #	self.out.branch("GTau_noiso_pt","D")
@@ -205,48 +264,106 @@ class zttModule(Module):
 #        self.out.branch("GTwoProng_noiso_eta","D")
 #	self.out.branch("GTwoProng_3track_eta","D")
 
-	self.out.branch("TPTauDeltaR","D")
-	self.out.branch("GTPnTracks","D")
-
-	self.out.branch("GMET","D")
-
-	self.out.branch("GPileup_nTrueInt","D")
-	self.out.branch("GSF_central","D")
-	self.out.branch("GSF_plus","D")
-	self.out.branch("GSF_minus","D")
-	self.out.branch("GSF_pileup_central","D")
-        self.out.branch("GSF_pileup_plus","D")
-        self.out.branch("GSF_pileup_minus","D")
-        self.out.branch("GSF_id_iso_trig","D")
-	self.out.branch("GSF_rochester","D")
-	self.out.branch("GSF_dataset","D")
-    	self.out.branch("GSF_HEM","D")
-
-	self.out.branch("GnJets_corrected","D")
-	self.out.branch("GJet_pt","D")
-	self.out.branch("GJet_eta","D")
-	self.out.branch("GJet_phi","D")
-	self.out.branch("GJet_mass","D")
-    	self.out.branch("Ght","D")
-
-	self.out.branch("nMuons","D")
-	self.out.branch("nTaus","D")
-	self.out.branch("nJets","D")
-	self.out.branch("GMuon_pt_tpcheck","D")
-
-	self.out.branch("GTransMass","D")
-
     def endFile(self, inputFile, outputFile, inputTree, wrappedOutputTree):
-        self.out.fillBranch("GEventsRunOver",self.nevents)
+        #self.out.fillBranch("GEventsRunOver",self.nevents)
+        pass
 
     def analyze(self, event):
+        print('start')
+        jets = Collection(event, "Jet")
+        electrons = Collection(event, "Electron")
+        muons = Collection(event, "Muon")
+        taus = Collection(event, "Tau")
+        twoprongs = Collection(event, "TwoProngModified")
+        twoprongs = sorted(twoprongs, reverse=True, key=lambda obj : obj.pt)
+        pv = Object(event, "PV")
+        met = Object(event, "MET")
+        hlt = Object(event,"HLT")
+        pileup = Object(event,"Pileup")
+        run = Object(event,"run")
+        #if DMC==1: genpart = Collection(event, "GenPart")
+
+        def passEVeto():
+            return True
+        def passBJetVeto():
+            return True
+        def passMuVeto():
+            return True
+        def passDiMuVeto():
+            return True
+        def findMuon():
+            return 0, 1
+        def findTauCand(mu_index):
+            return 0, 1
+        def computeEventWideVars(tau_index):
+            return 0.5, 0, 5
+        def passCuts(deltar, pzeta, mt):
+            return (deltar > 0.1) and (pzeta > -25) and (mt < 50)
+
+        passEVeto = passEVeto()
+        passBJetVeto = passBJetVeto()
+        passMuVeto = passMuVeto()
+        passDiMuVeto = passDiMuVeto()
+        passVetos = passEVeto and passBJetVeto and passMuVeto and passDiMuVeto
+        passTrigger = True
+        if not passVetos: return False
+        if not passTrigger: return False
+
+        # now what?
+        # look for a muon first of all and reject if you cant find one
+        # doing this also determines iso vs anti
+        # having done that, find a taucand and check dR and the other event wide cuts Pzeta and MT
+        # doing this determines os vs ss
+
+        ver_Index_muonobj, ver_RegionIso = findMuon() # 1 = isolated, 2 = anti-isolated, -1 = fail
+        ver_Index_tauobj, ver_RegionOSSS = findTauCand(ver_Index_muonobj) # 1 = OS, 2 = SS, -1 = fail
+        deltar, pzeta, mt = computeEventWideVars(ver_Index_tauobj)
+        passCuts = passCuts(deltar, pzeta, mt)
+        if not passCuts: return False
+
+        # TEMP FIXME
+        if len(taus) == 0: return False
+        if len(muons) == 0: return False
+
+        taucand_obj = taus[ver_Index_tauobj]
+        muon_obj = muons[ver_Index_muonobj]
+        taucand_vec = ROOT.Math.PtEtaPhiMVector(taucand_obj.pt, taucand_obj.eta, taucand_obj.phi, taucand_obj.mass)
+        muon_vec = ROOT.Math.PtEtaPhiMVector(muon_obj.pt, muon_obj.eta, muon_obj.phi, muon_obj.mass)
+        Zvis_vec = taucand_vec + muon_vec
+        ver_Zvis_pt = Zvis_vec.Pt()
+        ver_Zvis_eta = Zvis_vec.Eta()
+        ver_Zvis_phi = Zvis_vec.Phi()
+        ver_Zvis_mass = Zvis_vec.M()
+        ver_Zvis_dR = deltar
+        ver_cut_Pzeta = pzeta
+        ver_cut_MT = mt
+        
+        self.out.fillBranch(self.ver+"RegionIso", ver_RegionIso)
+        self.out.fillBranch(self.ver+"RegionOSSS", ver_RegionOSSS)
+        self.out.fillBranch(self.ver+"Zvis_pt", ver_Zvis_pt)
+        self.out.fillBranch(self.ver+"Zvis_eta", ver_Zvis_eta)
+        self.out.fillBranch(self.ver+"Zvis_phi", ver_Zvis_phi)
+        self.out.fillBranch(self.ver+"Zvis_mass", ver_Zvis_mass)
+        self.out.fillBranch(self.ver+"Zvis_dR", ver_Zvis_dR)
+        self.out.fillBranch(self.ver+"Index_tauobj", ver_Index_tauobj)
+        self.out.fillBranch(self.ver+"Index_muon", ver_Index_muonobj)
+        self.out.fillBranch(self.ver+"cut_Pzeta", ver_cut_Pzeta)
+        self.out.fillBranch(self.ver+"cut_MT", ver_cut_MT)
+        #self.out.fillBranch(self.ver+"HT", ver_HT)
+        #self.out.fillBranch(self.ver+"nJets", ver_nJets)
+
+        print('hi')
+        return True        
+
+
+########
+
 	###Data or MC Tag and other Tags###
 	DMC= self.DMC ##0 for data, 1 for MC
 	yeartag = self.yeartag ##2018,2017, or 2016
 	antiiso= self.antiiso #antiiso if set to 1, iso if set to 0 (iso is normal run)
 	self.nevents+=1
 	mcnum = self.mcnum ##will correspond to a JSON file to pull the MC to data Scalefactor
-
 
 	sf_pileup_c=1
         sf_pileup_p=1

@@ -8,6 +8,10 @@ import os
 import ctypes
 import json
 
+CUT_ZPAIR_DR = 0.5
+CUT_PZETA = -25
+CUT_MT = 30
+
 class zttModule(Module):
     def __init__(self,tags):
         self.m4_6func= None
@@ -274,56 +278,149 @@ class zttModule(Module):
         electrons = Collection(event, "Electron")
         muons = Collection(event, "Muon")
         taus = Collection(event, "Tau")
-        twoprongs = Collection(event, "TwoProngModified")
-        twoprongs = sorted(twoprongs, reverse=True, key=lambda obj : obj.pt)
+        twoprongs = Collection(event, "TwoProng")
+        #twoprongs = sorted(twoprongs, reverse = True, key = lambda obj : obj.pt)
+        twoprongsmod = Collection(event, "TwoProngModified")
+        #twoprongsmod = sorted(twoprongsmod, reverse = True, key = lambda obj : obj.pt)
         pv = Object(event, "PV")
         met = Object(event, "MET")
         hlt = Object(event,"HLT")
         pileup = Object(event,"Pileup")
         run = Object(event,"run")
         #if DMC==1: genpart = Collection(event, "GenPart")
+        year = 2018
+
+        def passTrigger():
+            if year == 2018 or year == 2016: return hlt.IsoMu24
+            elif year == 2017: return hlt.IsoMu27
+            else: return False
 
         def passEVeto():
+            for electron in electrons:
+                if self.Electron_Veto(electron): return False
             return True
-        def passBJetVeto():
-            return True
-        def passMuVeto():
-            return True
-        def passDiMuVeto():
-            return True
-        def findMuon():
-            return 0, 1
-        def findTauCand(mu_index):
-            return 0, 1
-        def computeEventWideVars(tau_index):
-            return 0.5, 0, 5
-        def passCuts(deltar, pzeta, mt):
-            return (deltar > 0.1) and (pzeta > -25) and (mt < 50)
 
+        def passBJetVeto():
+            for jet in jets:
+              if self.BJet_Veto(jet): return False
+            return True
+
+        def passMuVeto(index):
+            if index == -1: return False
+            for i, muon in enumerate(muons):
+              if i == index: continue
+              if self.Muon_Veto(muon): return False
+            return True
+
+        def passDiMuVeto():
+          for i, muon1 in enumerate(muons):
+            for j, muon2 in enumerate(muons):
+              if j<=i: continue
+              if self.DiMuon_Veto(muon1,muon2): return False
+          return True
+
+        def findMuon():
+          index = -1
+          for i, muon in enumerate(muons):
+            if self.MuonID_sansIso(muon) and (index == -1 or muon.pt > muons[index].pt): index = i
+          if index == -1: isoBit = -1
+          elif self.MuonIsIso(muons[index]): isoBit = 1
+          else: isoBit = 2 
+          return index, isoBit
+    
+        def TauCandID(obj, ver):
+          obj_vec = ROOT.Math.PtEtaPhiMVector(obj.pt, obj.eta, obj.phi, obj.mass)
+          globaloverlap = False
+          for muon in muons:
+            if muon.pt < 5: continue
+            if not muon.isGlobal: continue
+            muon_vec = ROOT.Math.PtEtaPhiMVector(muon.pt, muon.eta, muon.phi, muon.mass)
+            dr = ROOT.Math.VectorUtil.DeltaR(muon_vec,obj_vec)
+            if dr < 0.1:
+              globaloverlap = True
+              break
+          if ver == 'tau': additionalID = obj.idDecayModeOldDMs and (obj.leadTkPtOverTauPt*obj.pt) >5 and (obj.idAntiEleDeadECal &0x1) == 0x1 and (obj.idAntiMu &0x2) == 0x2
+          elif ver == 'tp' or ver == 'tpm': additionalID = True
+          if obj.pt > 20 and abs(obj.eta)< 2.3 and globaloverlap == False and additionalID: return True
+
+        def TauCandCharge(obj, ver):
+            if ver == 'tau': return obj.charge
+            elif ver == 'tp': return 1 #FIXME
+            elif ver == 'tpm': return -1
+            else: return 0
+
+        def findTauCand(mu_index, ver):
+            if mu_index == -1: return -1, -1
+            index = -1
+            if ver == 'tau': collection = taus
+            elif ver == 'tp': collection = twoprongs
+            elif ver == 'tpm': collection = twoprongsmod
+            for i, obj in enumerate(collection):
+              if TauCandID(obj, ver) and (index == -1 or obj.pt > collection[index].pt): index = i
+            if index == -1: return -1, -1
+            mu_charge = muons[mu_index].charge
+            taucand_charge = TauCandCharge(obj, ver)
+            if mu_charge == 0 or taucand_charge == 0: osssBit = -1
+            elif mu_charge * taucand_charge > 0: osssBit = 1
+            else: osssBit = 2
+            return index, osssBit
+
+        def mydot(vec1, vec2):
+            return vec1.X() * vec2.X() + vec1.Y() * vec2.Y()
+
+        def mydphi(phi1, phi2):
+            dphi = abs(phi2-phi1)
+            if dphi > math.pi: dphi -= 2*math.pi
+            if dphi < -math.pi: dphi += 2*math.pi
+            return dphi
+
+        def computeEventWideVars(mu_index, tau_index, ver):
+            if mu_index == -1 or tau_index == -1: return 0, 0, 0
+            mu_obj = muons[mu_index]
+            if ver == 'tau': tau_obj = taus[tau_index]
+            if ver == 'tp': tau_obj = twoprongs[tau_index]
+            if ver == 'tpm': tau_obj = twoprongsmod[tau_index]
+            tau_vec = ROOT.Math.PtEtaPhiMVector(tau_obj.pt, tau_obj.eta, tau_obj.phi, tau_obj.mass)
+            mu_vec = ROOT.Math.PtEtaPhiMVector(mu_obj.pt, mu_obj.eta, mu_obj.phi, mu_obj.mass)
+
+            dr = ROOT.Math.VectorUtil.DeltaR(mu_vec, tau_vec)
+
+            mu_Tvec = ROOT.Math.Polar2DVector(mu_vec.Pt(), mu_vec.Phi())
+            tau_Tvec = ROOT.Math.Polar2DVector(tau_vec.Pt(), tau_vec.Phi())
+            met_Tvec = ROOT.Math.Polar2DVector(met.pt, met.phi)
+            muhat = ROOT.Math.Polar2DVector(1.0, mu_vec.Phi())
+            tauhat = ROOT.Math.Polar2DVector(1.0, tau_vec.Phi())
+            zeta = muhat + tauhat
+            zeta.SetR(1.0)
+            pall = mydot((mu_Tvec + tau_Tvec + met_Tvec), zeta)
+            pvis = mydot(mu_Tvec + tau_Tvec, zeta)
+            pzeta = pall - 0.85*pvis
+
+            dphi = mydphi(mu_vec.Phi(), met.phi)
+            mt = pow(2*mu_vec.Pt()*met.pt*(1-math.cos(dphi)), 0.5)
+
+            return dr, pzeta, mt
+
+        def passEventWideCuts(deltar, pzeta, mt):
+            return (deltar > CUT_ZPAIR_DR) and (pzeta > CUT_PZETA) and (mt < CUT_MT)
+
+        ver = 'tau'
+        ver_Index_muonobj, ver_RegionIso = findMuon()
+        ver_Index_tauobj, ver_RegionOSSS = findTauCand(ver_Index_muonobj, ver)
+        haveMuonAndTauCand = ver_Index_tauobj != -1
+        deltar, pzeta, mt = computeEventWideVars(ver_Index_muonobj, ver_Index_tauobj, ver)
+        passEventWideCuts = passEventWideCuts(deltar, pzeta, mt)
         passEVeto = passEVeto()
         passBJetVeto = passBJetVeto()
-        passMuVeto = passMuVeto()
+        passMuVeto = passMuVeto(ver_Index_muonobj)
         passDiMuVeto = passDiMuVeto()
         passVetos = passEVeto and passBJetVeto and passMuVeto and passDiMuVeto
-        passTrigger = True
-        if not passVetos: return False
+        passTrigger = passTrigger()
+
         if not passTrigger: return False
-
-        # now what?
-        # look for a muon first of all and reject if you cant find one
-        # doing this also determines iso vs anti
-        # having done that, find a taucand and check dR and the other event wide cuts Pzeta and MT
-        # doing this determines os vs ss
-
-        ver_Index_muonobj, ver_RegionIso = findMuon() # 1 = isolated, 2 = anti-isolated, -1 = fail
-        ver_Index_tauobj, ver_RegionOSSS = findTauCand(ver_Index_muonobj) # 1 = OS, 2 = SS, -1 = fail
-        deltar, pzeta, mt = computeEventWideVars(ver_Index_tauobj)
-        passCuts = passCuts(deltar, pzeta, mt)
-        if not passCuts: return False
-
-        # TEMP FIXME
-        if len(taus) == 0: return False
-        if len(muons) == 0: return False
+        if not passVetos: return False
+        if not haveMuonAndTauCand: return False
+        if not passEventWideCuts: return False
 
         taucand_obj = taus[ver_Index_tauobj]
         muon_obj = muons[ver_Index_muonobj]
@@ -338,8 +435,8 @@ class zttModule(Module):
         ver_cut_Pzeta = pzeta
         ver_cut_MT = mt
         
-        self.out.fillBranch(self.ver+"RegionIso", ver_RegionIso)
-        self.out.fillBranch(self.ver+"RegionOSSS", ver_RegionOSSS)
+        self.out.fillBranch(self.ver+"RegionIso", ver_RegionIso) # 1 = isolated, 2 = anti-isolated, -1 = fail
+        self.out.fillBranch(self.ver+"RegionOSSS", ver_RegionOSSS) # 1 = OS, 2 = SS, -1 = fail
         self.out.fillBranch(self.ver+"Zvis_pt", ver_Zvis_pt)
         self.out.fillBranch(self.ver+"Zvis_eta", ver_Zvis_eta)
         self.out.fillBranch(self.ver+"Zvis_phi", ver_Zvis_phi)
@@ -920,6 +1017,13 @@ class zttModule(Module):
         if deltarm>0.15 and muon2.pt>15 and  muon1.pt> 15 and abs(muon2.eta)<2.4 and abs(muon1.eta)<2.4 and np.signbit(muon2.charge)!= np.signbit(muon1.charge) and muon2.isGlobal and muon1.isGlobal and muon2.isTracker and muon1.isTracker and muon2.isPFcand and muon1.isPFcand and abs(muon2.dz)<0.2 and abs(muon1.dz)<0.2 and abs(muon2.dxy)<0.045 and abs(muon1.dxy) <0.045 and muon2.pfIsoId >=1 and muon1.pfIsoId >=1: return True
 	else: return False
 
+    def MuonID_sansIso(self, muon):
+	    if muon.pt >28 and abs(muon.eta) <2.1 and muon.tightId and muon.dz < 0.2 and abs(muon.dxy) <0.045: return True
+     
+    def MuonIsIso(self, muon):
+      return muon.pfIsoId >=4 
+
+
     def Muon_Cuts(self, muon):
 	if muon.pt >28 and abs(muon.eta) <2.1 and muon.tightId and muon.pfIsoId >=4 and muon.dz < 0.2 and abs(muon.dxy) <0.045: return True
 	##changing to tight temp
@@ -929,6 +1033,7 @@ class zttModule(Module):
         if muon.pt >28 and abs(muon.eta) <2.1 and muon.tightId and muon.pfIsoId <4 and muon.dz < 0.2 and abs(muon.dxy) <0.045: return True
     #    if muon.pfIsoId <3 and muon.dz < 0.2 : return True
         else: return False
+
 
 
     def Tau_Cuts(self, tau, goodmuon, muons):

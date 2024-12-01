@@ -221,25 +221,23 @@ class zttModule(Module):
 
         ###
 
-        self.ver = 'VerTau_'
-
-	self.out.branch(self.ver+"RegionIso","D")
-	self.out.branch(self.ver+"RegionOSSS","D")
-
-	self.out.branch(self.ver+"Zvis_pt","D")
-	self.out.branch(self.ver+"Zvis_eta","D")
-	self.out.branch(self.ver+"Zvis_phi","D")
-	self.out.branch(self.ver+"Zvis_mass","D")
-	self.out.branch(self.ver+"Zvis_dR","D")
-
-	self.out.branch(self.ver+"Index_tauobj","D")
-	self.out.branch(self.ver+"Index_muon","D")
-
-	self.out.branch(self.ver+"cut_Pzeta","D")
-	self.out.branch(self.ver+"cut_MT","D")
-
-	#self.out.branch(self.ver+"HT","D")
-	#self.out.branch(self.ver+"nJets","D")
+        def add_branches(ver):
+            self.out.branch(ver+"RegionIso","D")
+            self.out.branch(ver+"RegionOSSS","D")
+            self.out.branch(ver+"Zvis_pt","D")
+            self.out.branch(ver+"Zvis_eta","D")
+            self.out.branch(ver+"Zvis_phi","D")
+            self.out.branch(ver+"Zvis_mass","D")
+            self.out.branch(ver+"Zvis_dR","D")
+            self.out.branch(ver+"Index_tauobj","I")
+            self.out.branch(ver+"Index_muon","I")
+            self.out.branch(ver+"cut_Pzeta","D")
+            self.out.branch(ver+"cut_MT","D")
+            #self.out.branch(ver+"HT","D")
+            #self.out.branch(ver+"nJets","D")
+        add_branches("AnaTau_")
+        add_branches("AnaTp_")
+        add_branches("AnaTpm_")
 
         # code snippet in case array branches are needed
         #self.out.branch("n"+"", "I")
@@ -273,7 +271,7 @@ class zttModule(Module):
         pass
 
     def analyze(self, event):
-        print('start')
+        #print('start')
         jets = Collection(event, "Jet")
         electrons = Collection(event, "Electron")
         muons = Collection(event, "Muon")
@@ -345,8 +343,14 @@ class zttModule(Module):
 
         def TauCandCharge(obj, ver):
             if ver == 'tau': return obj.charge
-            elif ver == 'tp': return 1 #FIXME
-            elif ver == 'tpm': return -1
+            elif ver == 'tp':
+                if obj.CHpos_pt > obj.CHneg_pt: return 1
+                else: return -1
+            elif ver == 'tpm':
+                if obj.nTracks == 3: return obj.CHextra
+                else:
+                    if obj.CHpos_pt > obj.CHneg_pt: return 1
+                    else: return -1    
             else: return 0
 
         def findTauCand(mu_index, ver):
@@ -404,53 +408,78 @@ class zttModule(Module):
         def passEventWideCuts(deltar, pzeta, mt):
             return (deltar > CUT_ZPAIR_DR) and (pzeta > CUT_PZETA) and (mt < CUT_MT)
 
-        ver = 'tau'
-        ver_Index_muonobj, ver_RegionIso = findMuon()
-        ver_Index_tauobj, ver_RegionOSSS = findTauCand(ver_Index_muonobj, ver)
-        haveMuonAndTauCand = ver_Index_tauobj != -1
-        deltar, pzeta, mt = computeEventWideVars(ver_Index_muonobj, ver_Index_tauobj, ver)
-        passEventWideCuts = passEventWideCuts(deltar, pzeta, mt)
-        passEVeto = passEVeto()
-        passBJetVeto = passBJetVeto()
-        passMuVeto = passMuVeto(ver_Index_muonobj)
-        passDiMuVeto = passDiMuVeto()
-        passVetos = passEVeto and passBJetVeto and passMuVeto and passDiMuVeto
-        passTrigger = passTrigger()
+        def fill_branches(ver):
+            if ver == 'tau': prefix = 'AnaTau_'
+            if ver == 'tp': prefix = 'AnaTp_'
+            if ver == 'tpm': prefix = 'AnaTpm_'
+            ver_Index_muonobj, ver_RegionIso = findMuon()
+            ver_Index_tauobj, ver_RegionOSSS = findTauCand(ver_Index_muonobj, ver)
+            haveMuonAndTauCand = ver_Index_tauobj != -1
+            deltar, pzeta, mt = computeEventWideVars(ver_Index_muonobj, ver_Index_tauobj, ver)
+            passEventWideCutsBit = passEventWideCuts(deltar, pzeta, mt)
+            passEVetoBit = passEVeto()
+            passBJetVetoBit = passBJetVeto()
+            passMuVetoBit = passMuVeto(ver_Index_muonobj)
+            passDiMuVetoBit = passDiMuVeto()
+            passVetosBit = passEVetoBit and passBJetVetoBit and passMuVetoBit and passDiMuVetoBit
+            passTriggerBit = passTrigger()
 
-        if not passTrigger: return False
-        if not passVetos: return False
-        if not haveMuonAndTauCand: return False
-        if not passEventWideCuts: return False
+            passBit = True
+            if not passTriggerBit: passBit = False
+            if not passVetosBit: passBit = False
+            if not haveMuonAndTauCand: passBit = False
+            if not passEventWideCutsBit: passBit = False
 
-        taucand_obj = taus[ver_Index_tauobj]
-        muon_obj = muons[ver_Index_muonobj]
-        taucand_vec = ROOT.Math.PtEtaPhiMVector(taucand_obj.pt, taucand_obj.eta, taucand_obj.phi, taucand_obj.mass)
-        muon_vec = ROOT.Math.PtEtaPhiMVector(muon_obj.pt, muon_obj.eta, muon_obj.phi, muon_obj.mass)
-        Zvis_vec = taucand_vec + muon_vec
-        ver_Zvis_pt = Zvis_vec.Pt()
-        ver_Zvis_eta = Zvis_vec.Eta()
-        ver_Zvis_phi = Zvis_vec.Phi()
-        ver_Zvis_mass = Zvis_vec.M()
-        ver_Zvis_dR = deltar
-        ver_cut_Pzeta = pzeta
-        ver_cut_MT = mt
-        
-        self.out.fillBranch(self.ver+"RegionIso", ver_RegionIso) # 1 = isolated, 2 = anti-isolated, -1 = fail
-        self.out.fillBranch(self.ver+"RegionOSSS", ver_RegionOSSS) # 1 = OS, 2 = SS, -1 = fail
-        self.out.fillBranch(self.ver+"Zvis_pt", ver_Zvis_pt)
-        self.out.fillBranch(self.ver+"Zvis_eta", ver_Zvis_eta)
-        self.out.fillBranch(self.ver+"Zvis_phi", ver_Zvis_phi)
-        self.out.fillBranch(self.ver+"Zvis_mass", ver_Zvis_mass)
-        self.out.fillBranch(self.ver+"Zvis_dR", ver_Zvis_dR)
-        self.out.fillBranch(self.ver+"Index_tauobj", ver_Index_tauobj)
-        self.out.fillBranch(self.ver+"Index_muon", ver_Index_muonobj)
-        self.out.fillBranch(self.ver+"cut_Pzeta", ver_cut_Pzeta)
-        self.out.fillBranch(self.ver+"cut_MT", ver_cut_MT)
-        #self.out.fillBranch(self.ver+"HT", ver_HT)
-        #self.out.fillBranch(self.ver+"nJets", ver_nJets)
+            if passBit:
+              if ver == 'tau': taucand_obj = taus[ver_Index_tauobj]
+              if ver == 'tp': taucand_obj = twoprongs[ver_Index_tauobj]
+              if ver == 'tpm': taucand_obj = twoprongsmod[ver_Index_tauobj]
+              muon_obj = muons[ver_Index_muonobj]
+              taucand_vec = ROOT.Math.PtEtaPhiMVector(taucand_obj.pt, taucand_obj.eta, taucand_obj.phi, taucand_obj.mass)
+              muon_vec = ROOT.Math.PtEtaPhiMVector(muon_obj.pt, muon_obj.eta, muon_obj.phi, muon_obj.mass)
+              Zvis_vec = taucand_vec + muon_vec
+              ver_Zvis_pt = Zvis_vec.Pt()
+              ver_Zvis_eta = Zvis_vec.Eta()
+              ver_Zvis_phi = Zvis_vec.Phi()
+              ver_Zvis_mass = Zvis_vec.M()
+              ver_Zvis_dR = deltar
+              ver_cut_Pzeta = pzeta
+              ver_cut_MT = mt
+              self.out.fillBranch(prefix+"RegionIso", ver_RegionIso) # 1 = isolated, 2 = anti-isolated, -1 = fail
+              self.out.fillBranch(prefix+"RegionOSSS", ver_RegionOSSS) # 1 = OS, 2 = SS, -1 = fail
+              self.out.fillBranch(prefix+"Zvis_pt", ver_Zvis_pt)
+              self.out.fillBranch(prefix+"Zvis_eta", ver_Zvis_eta)
+              self.out.fillBranch(prefix+"Zvis_phi", ver_Zvis_phi)
+              self.out.fillBranch(prefix+"Zvis_mass", ver_Zvis_mass)
+              self.out.fillBranch(prefix+"Zvis_dR", ver_Zvis_dR)
+              self.out.fillBranch(prefix+"Index_tauobj", ver_Index_tauobj)
+              self.out.fillBranch(prefix+"Index_muon", ver_Index_muonobj)
+              self.out.fillBranch(prefix+"cut_Pzeta", ver_cut_Pzeta)
+              self.out.fillBranch(prefix+"cut_MT", ver_cut_MT)
+              return True
+            else:
+              self.out.fillBranch(prefix+"RegionIso", -2) # 1 = isolated, 2 = anti-isolated, -1 = fail
+              self.out.fillBranch(prefix+"RegionOSSS", -2) # 1 = OS, 2 = SS, -1 = fail
+              self.out.fillBranch(prefix+"Zvis_pt", -1)
+              self.out.fillBranch(prefix+"Zvis_eta", 10)
+              self.out.fillBranch(prefix+"Zvis_phi", 10)
+              self.out.fillBranch(prefix+"Zvis_mass", -1)
+              self.out.fillBranch(prefix+"Zvis_dR", -1)
+              self.out.fillBranch(prefix+"Index_tauobj", -2)
+              self.out.fillBranch(prefix+"Index_muon", -2)
+              self.out.fillBranch(prefix+"cut_Pzeta", -1000)
+              self.out.fillBranch(prefix+"cut_MT", -1)
+              return False
 
-        print('hi')
-        return True        
+        bit1 = fill_branches('tau')
+        bit2 = fill_branches('tp')
+        bit3 = fill_branches('tpm')
+        return bit1 or bit2 or bit3
+        #return bit1
+        #return bit1 or bit2
+
+        #print('hi')
+        #return True        
 
 
 ########

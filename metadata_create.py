@@ -22,7 +22,6 @@ tree_filename = args.rootfile
 arg_flag = int(args.proc)
 datasetname = args.dataset
 datasetname_id = int(hashlib.sha256(datasetname.encode('utf-8')).hexdigest(), 16) % 10**8
-
 in_key =  "---#---#---"
 out_key = "===#===#==="
 
@@ -55,10 +54,10 @@ def parse(filename):
 reports = parse(report_filename)
 
 print("this many reports:", len(reports))
-for i, d in enumerate(reports):
-  print("report", i+1)
-  for key in d:
-    print("  ", key, d[key])
+#for i, d in enumerate(reports):
+#  print("report", i+1)
+#  for key in d:
+#    print("  ", key, d[key])
 
 for report in reports:
   if report['name'] == 'TotalEventsWritten':
@@ -83,9 +82,9 @@ xs = array('f', [ 0.0 ])
 metadata.Branch('dataset', dataset)
 metadata.Branch('dataset_id', dataset_id, 'dataset_id/I')
 metadata.Branch('flag', flag, 'flag/I')
-metadata.Branch('evtWritten', evtWritten, 'evtWritten/I')
-metadata.Branch('evtProcessed', evtProcessed, 'evtProcessed/I')
-metadata.Branch('evtPassDatafilter', evtPassDatafilter, 'evtPassDatafilter/I')
+#metadata.Branch('evtWritten', evtWritten, 'evtWritten/I')
+#metadata.Branch('evtProcessed', evtProcessed, 'evtProcessed/I')
+#metadata.Branch('evtPassDatafilter', evtPassDatafilter, 'evtPassDatafilter/I')
 metadata.Branch('xs', xs, 'xs/F')
 
 dataset.assign(datasetname)
@@ -96,7 +95,33 @@ evtProcessed[0] = report_evtProcessed
 evtPassDatafilter[0] = report_evtPassDatafilter
 xs[0] = args.xs
 
+def get_values(reports, names):
+    name_to_value = {}
+    for report in reports:
+        for name in names:
+            if report['name'] == name:
+                name_to_value[name] = report['count']
+    return name_to_value
+
+def add_value(tree, branch, value):
+    branchname = branch[:-2]
+    branchstr = branch
+    globals()[branch] = array('i', [ 0 ])
+    globals()[branch][0] = value
+    tree.Branch(branchname, globals()[branch], branchstr) 
+
+name_to_branchname = {
+'TotalEventsWritten' : 'evtWritten/I',
+'TotalEventsProcessed' : 'evtProcessed/I',
+'TotalEventsPassDataFilters' : 'evtPassDatafilter/I',
+}
+name_to_value = get_values(reports, name_to_branchname.keys())
+for name in name_to_value:
+    add_value(metadata, name_to_branchname[name], name_to_value[name])
+
 metadata.Fill()
 metadata.BuildIndex("dataset_id", "flag")
-#metadata.Print()
+
+metadata.Scan("*")
+
 metadata.Write()

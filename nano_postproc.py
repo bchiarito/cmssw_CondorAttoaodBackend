@@ -78,7 +78,7 @@ modules += [baselineModule(datamc, datasetname, flag)]
 modules += [simpleCounter(args.report, "TotalEventsPassDataFilters")]
 if args.mc: modules += [mcHatModule()]
 if args.analyzer == 'main': modules += [analysisModule(), analysisModule(cutbased=True)]
-if args.analyzer == 'ztt': modules += [zttModule(tags)]
+if args.analyzer == 'ztt': modules += [zttModule(args.report, tags, datamc)]
 if args.analyzer == 'trigger': modules += [triggerModule(year="2018", filters_off=False)]
 if not args.selection=="None":
   modules += [simpleSelector(args.selection)]

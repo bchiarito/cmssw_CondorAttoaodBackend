@@ -1,3 +1,4 @@
+from __future__ import print_function
 from PhysicsTools.NanoAODTools.postprocessing.framework.datamodel import Collection, Object
 from PhysicsTools.NanoAODTools.postprocessing.framework.eventloop import Module
 import ROOT
@@ -13,22 +14,37 @@ CUT_PZETA = -25
 CUT_MT = 30
 
 class zttModule(Module):
-    def __init__(self,tags):
-        self.m4_6func= None
-        self.centralfunc= None
-        self.p4_6func= None
-	self.kSpreadMC = None
-	self.kSmearMC = None
-	self.kScaleDT = None
-	self.roccin = None
-	self.DMC = None
-	self.yeartag= None
-	self.mcnum= None
-	self.tags = tags
-	self.this_record = None
-	self.datasetscalefactor= None
-	self.nevents=None
-	self.antiiso= None
+    def __init__(self, report_filename, tags, datamc):
+      self.report = report_filename
+      self.metadata = {}
+      self.m4_6func= None
+      self.centralfunc= None
+      self.p4_6func= None
+      self.kSpreadMC = None
+      self.kSmearMC = None
+      self.kScaleDT = None
+      self.roccin = None
+      self.DMC = None
+      self.yeartag= None
+      self.mcnum= None
+      self.tags = tags
+      self.this_record = None
+      self.datasetscalefactor= None
+      self.nevents=None
+      self.antiiso= None
+      self.datamc = datamc
+
+      prefixes = ['AnaTau_', 'AnaTp_', 'AnaTpm_']
+      for prefix in prefixes:
+        self.metadata[prefix+'ztt_total'] = 0
+        self.metadata[prefix+'ztt_pass_trig'] = 0
+        self.metadata[prefix+'ztt_passOnly_muVeto'] = 0
+        self.metadata[prefix+'ztt_passOnly_elVeto'] = 0
+        self.metadata[prefix+'ztt_passOnly_diMuVeto'] = 0
+        self.metadata[prefix+'ztt_passOnly_bVeto'] = 0
+        self.metadata[prefix+'ztt_pass_allVeto'] = 0
+        self.metadata[prefix+'ztt_pass_muAndTau'] = 0
+        self.metadata[prefix+'ztt_pass_fullsel'] = 0
 
     def beginJob(self):
 	self.DMC = self.tags[0]
@@ -137,7 +153,14 @@ class zttModule(Module):
 		print("Pileup Calculation Done")
 
     def endJob(self):
-	print("Events Run over ", self.nevents)
+        with open(self.report, "a") as f:
+          for key in self.metadata:
+            tag = key
+            val = self.metadata[key]
+            f.write("---#---#---\n")
+            f.write(tag+"\n")
+            f.write("count "+ str(val)+"\n")
+            f.write("===#===#===\n\n")
 
     def beginFile(self, inputFile, outputFile, inputTree, wrappedOutputTree):
         self.out = wrappedOutputTree
@@ -233,11 +256,13 @@ class zttModule(Module):
             self.out.branch(ver+"Index_muon","I")
             self.out.branch(ver+"cut_Pzeta","D")
             self.out.branch(ver+"cut_MT","D")
-            #self.out.branch(ver+"HT","D")
-            #self.out.branch(ver+"nJets","D")
+            self.out.branch(ver+"HT","D")
+            self.out.branch(ver+"NJets","D")
         add_branches("AnaTau_")
         add_branches("AnaTp_")
         add_branches("AnaTpm_")
+
+        if self.datamc == 'sigRes': self.out.branch("dyDecayType","I")
 
         # code snippet in case array branches are needed
         #self.out.branch("n"+"", "I")
@@ -287,6 +312,67 @@ class zttModule(Module):
         run = Object(event,"run")
         #if DMC==1: genpart = Collection(event, "GenPart")
         year = 2018
+
+        def get_dy_decay_type(genparticles):
+          decay = 0
+          lep = 0
+          leps = []
+          for index, gp in enumerate(genparticles):
+            pid = abs(gp.pdgId)
+            if not (pid==11 or pid==13 or pid==15): continue
+            if not gp.genPartIdxMother == -1: momid = genparticles[gp.genPartIdxMother].pdgId
+            else: momid = -1
+            sf = gp.statusFlags
+            ispromt = bool(sf & 0b00000000000001)
+            ishard =  bool(sf & 0b00000010000000)
+            isfhard = bool(sf & 0b00000100000000)
+            islast =  bool(sf & 0b10000000000000)
+            if momid == 23 or ishard:
+              decay += 1
+              lep = pid
+            if momid == 23 or ishard or isfhard:
+              if islast: leps.append(index)
+          def hadronic(l):
+            if 111 in l or 211 in l or \
+               130 in l or 310 in l or 311 in l or 321 in l or \
+               323 in l or 221 in l:
+              return True
+            else: return False
+          tp = -1
+          if lep == 15:
+            dp1 = []
+            dp2 = []
+            for gp in genparticles:
+              pid = abs(gp.pdgId)
+              sf = gp.statusFlags
+              ispromt = bool(sf & 0b00000000000001)
+              ishard =  bool(sf & 0b00000010000000)
+              isfhard = bool(sf & 0b00000100000000)
+              if not gp.genPartIdxMother == -1: momid = genparticles[gp.genPartIdxMother].pdgId
+              else: momid = -1
+              if gp.genPartIdxMother == leps[0]:
+                dp1.append(pid)
+              if gp.genPartIdxMother == leps[1]:
+                dp2.append(pid)
+            if 11 in dp1 and 11 in dp2: tp = 1
+            elif 13 in dp1 and 13 in dp2: tp = 2
+            elif 11 in dp1 and 13 in dp2: tp = 3
+            elif 11 in dp2 and 13 in dp1: tp = 3
+            elif 11 in dp1 and hadronic(dp2): tp = 4
+            elif 11 in dp2 and hadronic(dp1): tp = 4
+            elif 13 in dp1 and hadronic(dp2): tp = 5
+            elif 13 in dp2 and hadronic(dp1): tp = 5
+            elif hadronic(dp1) and hadronic(dp2): tp = 6
+            else: tp = 0
+          if lep == 15 and tp == 5: return 1 # tau_mu tau_had
+          elif lep == 11: return 2 # el el
+          elif lep == 13: return 3 # mu mu
+          elif lep == 15 and tp == 1: return 4 # tau_e tau_e
+          elif lep == 15 and tp == 2: return 5 # tau_mu tau_mu
+          elif lep == 15 and tp == 3: return 6 # tau_e tau_mu
+          elif lep == 15 and tp == 4: return 7 # tau_e tau_had
+          elif lep == 15 and tp == 6: return 8 # tau_had tau_had
+          else: return -1 # unknown
 
         def passTrigger():
             if year == 2018 or year == 2016: return hlt.IsoMu24
@@ -338,7 +424,7 @@ class zttModule(Module):
               globaloverlap = True
               break
           if ver == 'tau': additionalID = obj.idDecayModeOldDMs and (obj.leadTkPtOverTauPt*obj.pt) >5 and (obj.idAntiEleDeadECal &0x1) == 0x1 and (obj.idAntiMu &0x2) == 0x2
-          elif ver == 'tp' or ver == 'tpm': additionalID = True
+          elif ver == 'tp' or ver == 'tpm': additionalID = obj.isTight
           if obj.pt > 20 and abs(obj.eta)< 2.3 and globaloverlap == False and additionalID: return True
 
         def TauCandCharge(obj, ver):
@@ -347,7 +433,7 @@ class zttModule(Module):
                 if obj.CHpos_pt > obj.CHneg_pt: return 1
                 else: return -1
             elif ver == 'tpm':
-                if obj.nTracks == 3: return obj.CHextra
+                if obj.nTracks == 3: return int(obj.CHextra_charge)
                 else:
                     if obj.CHpos_pt > obj.CHneg_pt: return 1
                     else: return -1    
@@ -362,10 +448,11 @@ class zttModule(Module):
             for i, obj in enumerate(collection):
               if TauCandID(obj, ver) and (index == -1 or obj.pt > collection[index].pt): index = i
             if index == -1: return -1, -1
+            obj = collection[index]
             mu_charge = muons[mu_index].charge
             taucand_charge = TauCandCharge(obj, ver)
             if mu_charge == 0 or taucand_charge == 0: osssBit = -1
-            elif mu_charge * taucand_charge > 0: osssBit = 1
+            elif mu_charge * taucand_charge < 0: osssBit = 1
             else: osssBit = 2
             return index, osssBit
 
@@ -412,14 +499,14 @@ class zttModule(Module):
             if ver == 'tau': prefix = 'AnaTau_'
             if ver == 'tp': prefix = 'AnaTp_'
             if ver == 'tpm': prefix = 'AnaTpm_'
-            ver_Index_muonobj, ver_RegionIso = findMuon()
-            ver_Index_tauobj, ver_RegionOSSS = findTauCand(ver_Index_muonobj, ver)
-            haveMuonAndTauCand = ver_Index_tauobj != -1
-            deltar, pzeta, mt = computeEventWideVars(ver_Index_muonobj, ver_Index_tauobj, ver)
+            Index_muonobj, RegionIso = findMuon()
+            Index_tauobj, RegionOSSS = findTauCand(Index_muonobj, ver)
+            haveMuonAndTauCand = Index_tauobj != -1
+            deltar, pzeta, mt = computeEventWideVars(Index_muonobj, Index_tauobj, ver)
             passEventWideCutsBit = passEventWideCuts(deltar, pzeta, mt)
             passEVetoBit = passEVeto()
             passBJetVetoBit = passBJetVeto()
-            passMuVetoBit = passMuVeto(ver_Index_muonobj)
+            passMuVetoBit = passMuVeto(Index_muonobj)
             passDiMuVetoBit = passDiMuVeto()
             passVetosBit = passEVetoBit and passBJetVetoBit and passMuVetoBit and passDiMuVetoBit
             passTriggerBit = passTrigger()
@@ -429,33 +516,62 @@ class zttModule(Module):
             if not passVetosBit: passBit = False
             if not haveMuonAndTauCand: passBit = False
             if not passEventWideCutsBit: passBit = False
+        
+            # metadata
+            self.metadata[prefix+'ztt_total'] += 1
+            if passTriggerBit:
+                self.metadata[prefix+'ztt_pass_trig'] += 1
+                if passVetosBit:
+                  self.metadata[prefix+'ztt_pass_allVeto'] += 1
+                  if haveMuonAndTauCand:
+                    self.metadata[prefix+'ztt_pass_muAndTau'] += 1
+                    if passEventWideCutsBit:
+                      self.metadata[prefix+'ztt_pass_fullsel'] += 1
+            if passEVetoBit: self.metadata[prefix+'ztt_passOnly_muVeto'] += 1
+            if passEVetoBit: self.metadata[prefix+'ztt_passOnly_elVeto'] += 1
+            if passEVetoBit: self.metadata[prefix+'ztt_passOnly_diMuVeto'] += 1
+            if passEVetoBit: self.metadata[prefix+'ztt_passOnly_bVeto'] += 1
 
             if passBit:
-              if ver == 'tau': taucand_obj = taus[ver_Index_tauobj]
-              if ver == 'tp': taucand_obj = twoprongs[ver_Index_tauobj]
-              if ver == 'tpm': taucand_obj = twoprongsmod[ver_Index_tauobj]
-              muon_obj = muons[ver_Index_muonobj]
+              if ver == 'tau': taucand_obj = taus[Index_tauobj]
+              if ver == 'tp': taucand_obj = twoprongs[Index_tauobj]
+              if ver == 'tpm': taucand_obj = twoprongsmod[Index_tauobj]
+              muon_obj = muons[Index_muonobj]
               taucand_vec = ROOT.Math.PtEtaPhiMVector(taucand_obj.pt, taucand_obj.eta, taucand_obj.phi, taucand_obj.mass)
               muon_vec = ROOT.Math.PtEtaPhiMVector(muon_obj.pt, muon_obj.eta, muon_obj.phi, muon_obj.mass)
               Zvis_vec = taucand_vec + muon_vec
-              ver_Zvis_pt = Zvis_vec.Pt()
-              ver_Zvis_eta = Zvis_vec.Eta()
-              ver_Zvis_phi = Zvis_vec.Phi()
-              ver_Zvis_mass = Zvis_vec.M()
-              ver_Zvis_dR = deltar
-              ver_cut_Pzeta = pzeta
-              ver_cut_MT = mt
-              self.out.fillBranch(prefix+"RegionIso", ver_RegionIso) # 1 = isolated, 2 = anti-isolated, -1 = fail
-              self.out.fillBranch(prefix+"RegionOSSS", ver_RegionOSSS) # 1 = OS, 2 = SS, -1 = fail
-              self.out.fillBranch(prefix+"Zvis_pt", ver_Zvis_pt)
-              self.out.fillBranch(prefix+"Zvis_eta", ver_Zvis_eta)
-              self.out.fillBranch(prefix+"Zvis_phi", ver_Zvis_phi)
-              self.out.fillBranch(prefix+"Zvis_mass", ver_Zvis_mass)
-              self.out.fillBranch(prefix+"Zvis_dR", ver_Zvis_dR)
-              self.out.fillBranch(prefix+"Index_tauobj", ver_Index_tauobj)
-              self.out.fillBranch(prefix+"Index_muon", ver_Index_muonobj)
-              self.out.fillBranch(prefix+"cut_Pzeta", ver_cut_Pzeta)
-              self.out.fillBranch(prefix+"cut_MT", ver_cut_MT)
+              Zvis_pt = Zvis_vec.Pt()
+              Zvis_eta = Zvis_vec.Eta()
+              Zvis_phi = Zvis_vec.Phi()
+              Zvis_mass = Zvis_vec.M()
+              Zvis_dR = deltar
+              cut_Pzeta = pzeta
+              cut_MT = mt
+              HT = 0
+              nJets = 0
+              for jet in jets:
+                if jet.pt < 30: continue
+                if abs(jet.eta) > 2.5: continue
+                if not (jet.jetId & 0b10): continue
+                jet_vec = ROOT.Math.PtEtaPhiMVector(jet.pt, jet.eta, jet.phi, jet.mass)
+                if ROOT.Math.VectorUtil.DeltaR(muon_vec, jet_vec) < 0.3: continue
+                if ROOT.Math.VectorUtil.DeltaR(taucand_vec, jet_vec) < 0.3: continue
+                HT += jet.pt
+                nJets += 1
+
+              self.out.fillBranch(prefix+"RegionIso", RegionIso) # 1 = isolated, 2 = anti-isolated, -1 = fail
+              self.out.fillBranch(prefix+"RegionOSSS", RegionOSSS) # 1 = OS, 2 = SS, -1 = fail
+              self.out.fillBranch(prefix+"Zvis_pt", Zvis_pt)
+              self.out.fillBranch(prefix+"Zvis_eta", Zvis_eta)
+              self.out.fillBranch(prefix+"Zvis_phi", Zvis_phi)
+              self.out.fillBranch(prefix+"Zvis_mass", Zvis_mass)
+              self.out.fillBranch(prefix+"Zvis_dR", Zvis_dR)
+              self.out.fillBranch(prefix+"Index_tauobj", Index_tauobj)
+              self.out.fillBranch(prefix+"Index_muon", Index_muonobj)
+              self.out.fillBranch(prefix+"cut_Pzeta", cut_Pzeta)
+              self.out.fillBranch(prefix+"cut_MT", cut_MT)
+              self.out.fillBranch(prefix+"HT", HT)
+              self.out.fillBranch(prefix+"NJets", nJets)
               return True
             else:
               self.out.fillBranch(prefix+"RegionIso", -2) # 1 = isolated, 2 = anti-isolated, -1 = fail
@@ -470,17 +586,18 @@ class zttModule(Module):
               self.out.fillBranch(prefix+"cut_Pzeta", -1000)
               self.out.fillBranch(prefix+"cut_MT", -1)
               return False
-
+        
         bit1 = fill_branches('tau')
         bit2 = fill_branches('tp')
         bit3 = fill_branches('tpm')
+        # mc
+        if self.datamc == 'sigRes':
+          genparticles = Collection(event, "GenPart")
+          decay_type = get_dy_decay_type(genparticles)
+          if decay_type == -1: print('fail')
+          self.out.fillBranch("dyDecayType", decay_type)
+          
         return bit1 or bit2 or bit3
-        #return bit1
-        #return bit1 or bit2
-
-        #print('hi')
-        #return True        
-
 
 ########
 

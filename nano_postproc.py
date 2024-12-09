@@ -20,6 +20,7 @@ parser.add_argument("--proc", default=0, type=int, help="integer flag")
 parser.add_argument("--drop", dest="branchsel", default=None, help=".txt file to drop branches")
 parser.add_argument("--filter", dest="selection", default="None", metavar='CHOICE', help="")
 parser.add_argument("-n", "--numEvents", dest="numEvents", default=-1, type=int, help="")
+parser.add_argument("--maxfiles", default=-1, type=int, help="")
 parser.add_argument("--outfile", default="out.root", help="name of final rootfile")
 parser.add_argument("--report", default="report.txt", help="name of intermediate report txt file")
 parser.add_argument("--analyzer", default="", help='')
@@ -60,6 +61,16 @@ elif os.path.isfile(args.input):
       # dont process for .txt
       if args.input[-4:] == '.txt':
         files.append(line.strip())
+if os.path.isdir(args.input):
+    files = []
+    d = os.path.normpath(args.input)
+    for dirpath, dirnames, filenames in os.walk(d):
+        for filename in filenames:
+            if filename.endswith(".root") and filename.startswith('NANO'):
+                files.append(dirpath+'/'+filename)
+                if len(files) == args.maxfiles: break
+#print(files)
+#sys.exit()
 
 # process arguments
 datasetname = args.dataset

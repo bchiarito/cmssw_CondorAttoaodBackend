@@ -44,6 +44,7 @@ class zttModule(Module):
         self.metadata[prefix+'ztt_passOnly_bVeto'] = 0
         self.metadata[prefix+'ztt_pass_allVeto'] = 0
         self.metadata[prefix+'ztt_pass_muAndTau'] = 0
+        self.metadata[prefix+'ztt_pass_MT'] = 0
         self.metadata[prefix+'ztt_pass_fullsel'] = 0
 
     def beginJob(self):
@@ -258,11 +259,13 @@ class zttModule(Module):
             self.out.branch(ver+"cut_MT","D")
             self.out.branch(ver+"HT","D")
             self.out.branch(ver+"NJets","D")
+            self.out.branch(ver+"PassPzeta","I")
+            self.out.branch(ver+"PassMT","I")
+            if self.datamc == 'sigRes': 
+              self.out.branch(ver+"DyDecayType","I")
         add_branches("AnaTau_")
         add_branches("AnaTp_")
         add_branches("AnaTpm_")
-
-        if self.datamc == 'sigRes': self.out.branch("dyDecayType","I")
 
         # code snippet in case array branches are needed
         #self.out.branch("n"+"", "I")
@@ -296,7 +299,6 @@ class zttModule(Module):
         pass
 
     def analyze(self, event):
-        #print('start')
         jets = Collection(event, "Jet")
         electrons = Collection(event, "Electron")
         muons = Collection(event, "Muon")
@@ -307,11 +309,36 @@ class zttModule(Module):
         #twoprongsmod = sorted(twoprongsmod, reverse = True, key = lambda obj : obj.pt)
         pv = Object(event, "PV")
         met = Object(event, "MET")
-        hlt = Object(event,"HLT")
-        pileup = Object(event,"Pileup")
-        run = Object(event,"run")
+        hlt = Object(event, "HLT")
+        pileup = Object(event, "Pileup")
+        run = Object(event, "run")
+        flags = Object(event, "Flag")
         #if DMC==1: genpart = Collection(event, "GenPart")
         year = 2018
+        if self.datamc == 'sigRes': genparticles = Collection(event, "GenPart")
+
+        if year == 2018:
+            passEventFilter = flags.goodVertices and flags.HBHENoiseFilter and \
+                    flags.HBHENoiseIsoFilter and flags.EcalDeadCellTriggerPrimitiveFilter \
+                    and flags.BadPFMuonFilter and flags.globalSuperTightHalo2016Filter
+            if self.datamc == "data":
+                passEventFilter = passEventFilter and flags.eeBadScFilter
+            else:
+                pass
+        '''
+        if self.era == "2017" or self.era == "2018":
+            ## Common filters
+            ## Missing the latest ecalBadCalibReducedMINIAODFilter, not in MiniAOD
+            ## But still using the old ecalBadCalibFilter from MiniAOD
+            passEventFilter = flags.goodVertices and flags.HBHENoiseFilter and \
+                    flags.HBHENoiseIsoFilter and flags.EcalDeadCellTriggerPrimitiveFilter \
+                    and flags.BadPFMuonFilter and flags.ecalBadCalibFilter  
+            ## Only data
+            if self.isData:
+                passEventFilter = passEventFilter and flags.globalSuperTightHalo2016Filter and flags.eeBadScFilter
+            elif not self.isFastSim:
+                passEventFilter = passEventFilter and flags.globalSuperTightHalo2016Filter
+        '''
 
         def get_dy_decay_type(genparticles):
           decay = 0
@@ -503,19 +530,16 @@ class zttModule(Module):
             Index_tauobj, RegionOSSS = findTauCand(Index_muonobj, ver)
             haveMuonAndTauCand = Index_tauobj != -1
             deltar, pzeta, mt = computeEventWideVars(Index_muonobj, Index_tauobj, ver)
-            passEventWideCutsBit = passEventWideCuts(deltar, pzeta, mt)
+            passDeltaR = deltar > CUT_ZPAIR_DR
+            passPzeta = pzeta > CUT_PZETA
+            passMT = mt < CUT_MT
             passEVetoBit = passEVeto()
             passBJetVetoBit = passBJetVeto()
             passMuVetoBit = passMuVeto(Index_muonobj)
             passDiMuVetoBit = passDiMuVeto()
             passVetosBit = passEVetoBit and passBJetVetoBit and passMuVetoBit and passDiMuVetoBit
             passTriggerBit = passTrigger()
-
-            passBit = True
-            if not passTriggerBit: passBit = False
-            if not passVetosBit: passBit = False
-            if not haveMuonAndTauCand: passBit = False
-            if not passEventWideCutsBit: passBit = False
+            passBit = passEventFilter and passTriggerBit and passVetosBit and haveMuonAndTauCand and passDeltaR
         
             # metadata
             self.metadata[prefix+'ztt_total'] += 1
@@ -523,10 +547,12 @@ class zttModule(Module):
                 self.metadata[prefix+'ztt_pass_trig'] += 1
                 if passVetosBit:
                   self.metadata[prefix+'ztt_pass_allVeto'] += 1
-                  if haveMuonAndTauCand:
+                  if haveMuonAndTauCand and passDeltaR:
                     self.metadata[prefix+'ztt_pass_muAndTau'] += 1
-                    if passEventWideCutsBit:
-                      self.metadata[prefix+'ztt_pass_fullsel'] += 1
+                    if passMT:
+                      self.metadata[prefix+'ztt_pass_MT'] += 1
+                      if passPzeta:
+                        self.metadata[prefix+'ztt_pass_fullsel'] += 1
             if passEVetoBit: self.metadata[prefix+'ztt_passOnly_muVeto'] += 1
             if passEVetoBit: self.metadata[prefix+'ztt_passOnly_elVeto'] += 1
             if passEVetoBit: self.metadata[prefix+'ztt_passOnly_diMuVeto'] += 1
@@ -547,7 +573,7 @@ class zttModule(Module):
               Zvis_dR = deltar
               cut_Pzeta = pzeta
               cut_MT = mt
-              HT = 0
+              HT = muon_vec.Pt() + taucand_vec.Pt()
               nJets = 0
               for jet in jets:
                 if jet.pt < 30: continue
@@ -572,6 +598,10 @@ class zttModule(Module):
               self.out.fillBranch(prefix+"cut_MT", cut_MT)
               self.out.fillBranch(prefix+"HT", HT)
               self.out.fillBranch(prefix+"NJets", nJets)
+              self.out.fillBranch(prefix+"PassPzeta", passPzeta)
+              self.out.fillBranch(prefix+"PassMT", passMT)
+              if self.datamc == 'sigRes':
+                self.out.fillBranch(prefix+"DyDecayType", get_dy_decay_type(genparticles))
               return True
             else:
               self.out.fillBranch(prefix+"RegionIso", -2) # 1 = isolated, 2 = anti-isolated, -1 = fail
@@ -585,18 +615,17 @@ class zttModule(Module):
               self.out.fillBranch(prefix+"Index_muon", -2)
               self.out.fillBranch(prefix+"cut_Pzeta", -1000)
               self.out.fillBranch(prefix+"cut_MT", -1)
+              self.out.fillBranch(prefix+"HT", -1)
+              self.out.fillBranch(prefix+"NJets", -1)
+              self.out.fillBranch(prefix+"PassPzeta", -1)
+              self.out.fillBranch(prefix+"PassMT", -1)
+              if self.datamc == 'sigRes':
+                self.out.fillBranch(prefix+"DyDecayType", -2)
               return False
         
         bit1 = fill_branches('tau')
         bit2 = fill_branches('tp')
         bit3 = fill_branches('tpm')
-        # mc
-        if self.datamc == 'sigRes':
-          genparticles = Collection(event, "GenPart")
-          decay_type = get_dy_decay_type(genparticles)
-          if decay_type == -1: print('fail')
-          self.out.fillBranch("dyDecayType", decay_type)
-          
         return bit1 or bit2 or bit3
 
 ########
@@ -1164,7 +1193,9 @@ class zttModule(Module):
 	else: return False
 
     def MuonID_sansIso(self, muon):
-	    if muon.pt >28 and abs(muon.eta) <2.1 and muon.tightId and muon.dz < 0.2 and abs(muon.dxy) <0.045: return True
+	    #if muon.pt > 28 and abs(muon.eta) < 2.1 and muon.mediumId and abs(muon.dz) < 0.2 and abs(muon.dxy) < 0.045: return True
+	    if muon.pt > 28 and abs(muon.eta) < 2.1 and muon.tightId and abs(muon.dz) < 0.2 and abs(muon.dxy) < 0.045: return True
+      else: return False
      
     def MuonIsIso(self, muon):
       return muon.pfIsoId >=4 
@@ -1199,7 +1230,7 @@ class zttModule(Module):
 #	return True
 
     def Muon_Veto(self, muon):
-	if muon.pt >10 and abs(muon.eta) <2.4 and abs(muon.dxy) <0.045 and muon.dz <0.2 and muon.mediumId and muon.pfIsoId >=1: return True
+	if muon.pt > 10 and abs(muon.eta) < 2.4 and abs(muon.dxy) < 0.045 and abs(muon.dz) < 0.2 and muon.mediumId and muon.pfIsoId >= 1: return True
 	else: return False
 
 

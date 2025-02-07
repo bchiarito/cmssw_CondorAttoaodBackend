@@ -12,7 +12,7 @@ from math import fabs
 
 
 class triggerModule(Module):
-    def __init__(self, year="2018", filters_off=False):
+    def __init__(self, year="2018", filters_off=True):
         self.year = year
         self.filters_off = filters_off
         pass     
@@ -36,5 +36,34 @@ class triggerModule(Module):
             return default_bool
 
     def analyze(self, event):
-        return True
 
+        if self.year == 'UL18' or self.year == 'UL17':
+          pass_filters = (
+          self.mygetattr(flags, 'goodVertices', True)
+          and self.mygetattr(flags, 'HBHENoiseFilter', True)
+          and self.mygetattr(flags, 'HBHENoiseIsoFilter', True)
+          and self.mygetattr(flags, 'EcalDeadCellTriggerPrimitiveFilter', True)
+          and self.mygetattr(flags, 'BadPFMuonFilter', True)
+          and self.mygetattr(flags, 'BadChargedCandidateFilter', True)
+          and self.mygetattr(flags, 'ecalBadCalibFilter', True)
+          and self.mygetattr(flags, 'globalSuperTightHalo2016Filter', True)
+          and self.mygetattr(flags, 'eeBadScFilter', True)
+          )
+          if not (pass_filters): return False
+          self.countPassingEvents += 1
+          return True
+        elif self.year == 'UL16':
+          pass_filters = (
+          self.mygetattr(flags, 'goodVertices', True)
+          and self.mygetattr(flags, 'HBHENoiseFilter', True)
+          and self.mygetattr(flags, 'HBHENoiseIsoFilter', True)
+          and self.mygetattr(flags, 'EcalDeadCellTriggerPrimitiveFilter', True)
+          and self.mygetattr(flags, 'BadPFMuonFilter', True)
+          and self.mygetattr(flags, 'BadChargedCandidateFilter', True)
+          and self.mygetattr(flags, 'globalSuperTightHalo2016Filter', True)
+          and self.mygetattr(flags, 'eeBadScFilter', True)
+          )
+          if not (pass_filters): return False
+          self.countPassingEvents += 1
+          return True
+        else: return True

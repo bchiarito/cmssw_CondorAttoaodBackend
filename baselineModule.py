@@ -39,7 +39,6 @@ class baselineModule(Module):
 
     def analyze(self, event):
         """process event, return True (go to next module) or False (fail, go to next event)"""
-        jets = Collection(event, "Jet")
         flags = Object(event, "Flag")
 
         # fill branches

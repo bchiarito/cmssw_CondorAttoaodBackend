@@ -1195,7 +1195,7 @@ class zttModule(Module):
     def MuonID_sansIso(self, muon):
 	    #if muon.pt > 28 and abs(muon.eta) < 2.1 and muon.mediumId and abs(muon.dz) < 0.2 and abs(muon.dxy) < 0.045: return True
 	    if muon.pt > 28 and abs(muon.eta) < 2.1 and muon.tightId and abs(muon.dz) < 0.2 and abs(muon.dxy) < 0.045: return True
-      else: return False
+            else: return False
      
     def MuonIsIso(self, muon):
       return muon.pfIsoId >=4 

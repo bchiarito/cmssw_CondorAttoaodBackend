@@ -23,35 +23,32 @@ args = parser.parse_args()
 import ROOT
 
 datasetname_id = int(hashlib.sha256(args.dataset.encode('utf-8')).hexdigest(), 16) % 10**8
-'''
-      for prefix in prefixes:
-        self.metadata[prefix+'ztt_total'] = 0
-        self.metadata[prefix+'ztt_pass_trig'] = 0
-        self.metadata[prefix+'ztt_passOnly_muVeto'] = 0
-        self.metadata[prefix+'ztt_passOnly_elVeto'] = 0
-        self.metadata[prefix+'ztt_passOnly_diMuVeto'] = 0
-        self.metadata[prefix+'ztt_passOnly_bVeto'] = 0
-        self.metadata[prefix+'ztt_pass_allVeto'] = 0
-        self.metadata[prefix+'ztt_pass_muAndTau'] = 0
-        self.metadata[prefix+'ztt_pass_fullsel'] = 0
-
-'''
 name_to_branchname = {
 'TotalEventsWritten' : 'evtWritten/I',
 'TotalEventsProcessed' : 'evtProcessed/I',
 'TotalEventsPassDataFilters' : 'evtPassDatafilter/I',
 }
-prefixes = ['AnaTau', 'AnaTp', 'AnaTpm']
+prefixes = ['AnaTau_', 'AnaTp_', 'AnaTpm_']
+tags = [
+'ztt_total',
+'ztt_flow_trig',
+'ztt_flow_allveto',
+'ztt_flow_muAndTau',
+'ztt_flow_fullsel',
+'ztt_passOnly_muVeto',
+'ztt_passOnly_elVeto',
+'ztt_passOnly_diMuVeto',
+'ztt_passOnly_bVeto',
+'ztt_nminusone_mt',
+'ztt_nminusone_pzeta',
+'ztt_nminusone_eveto',
+'ztt_nminusone_muveto',
+'ztt_nminusone_dimuveto',
+'ztt_nminusone_bjetveto',
+]
 for prefix in prefixes:
-  name_to_branchname[prefix+'_ztt_total'] = 'ztt'+prefix+'Total/I'
-  name_to_branchname[prefix+'_ztt_pass_trig'] = 'ztt'+prefix+'PassTrig/I'
-  name_to_branchname[prefix+'_ztt_passOnly_muVeto'] = 'ztt'+prefix+'PassOnlyMuVeto/I'
-  name_to_branchname[prefix+'_ztt_passOnly_elVeto'] = 'ztt'+prefix+'PassOnlyelVeto/I'
-  name_to_branchname[prefix+'_ztt_passOnly_diMuVeto'] = 'ztt'+prefix+'PassOnlydiMuVeto/I'
-  name_to_branchname[prefix+'_ztt_passOnly_bVeto'] = 'ztt'+prefix+'PassOnlybVeto/I'
-  name_to_branchname[prefix+'_ztt_pass_allVeto'] = 'ztt'+prefix+'PassAllVeto/I'
-  name_to_branchname[prefix+'_ztt_pass_muAndTau'] = 'ztt'+prefix+'PassMuAndTau/I'
-  name_to_branchname[prefix+'_ztt_pass_fullsel'] = 'ztt'+prefix+'PassFullSel/I'
+  for tag in tags:
+    name_to_branchname[prefix+tag] = 'ztt'+prefix+tag+'/I'
 
 branchname_to_value = {
 'xs/F' : 2.0,

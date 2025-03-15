@@ -37,15 +37,20 @@ class zttModule(Module):
       prefixes = ['AnaTau_', 'AnaTp_', 'AnaTpm_']
       for prefix in prefixes:
         self.metadata[prefix+'ztt_total'] = 0
-        self.metadata[prefix+'ztt_pass_trig'] = 0
+        self.metadata[prefix+'ztt_flow_trig'] = 0
+        self.metadata[prefix+'ztt_flow_allveto'] = 0
+        self.metadata[prefix+'ztt_flow_muAndTau'] = 0
+        self.metadata[prefix+'ztt_flow_fullsel'] = 0
         self.metadata[prefix+'ztt_passOnly_muVeto'] = 0
         self.metadata[prefix+'ztt_passOnly_elVeto'] = 0
         self.metadata[prefix+'ztt_passOnly_diMuVeto'] = 0
         self.metadata[prefix+'ztt_passOnly_bVeto'] = 0
-        self.metadata[prefix+'ztt_pass_allVeto'] = 0
-        self.metadata[prefix+'ztt_pass_muAndTau'] = 0
-        self.metadata[prefix+'ztt_pass_MT'] = 0
-        self.metadata[prefix+'ztt_pass_fullsel'] = 0
+        self.metadata[prefix+'ztt_nminusone_mt'] = 0
+        self.metadata[prefix+'ztt_nminusone_pzeta'] = 0
+        self.metadata[prefix+'ztt_nminusone_eveto'] = 0
+        self.metadata[prefix+'ztt_nminusone_muveto'] = 0
+        self.metadata[prefix+'ztt_nminusone_dimuveto'] = 0
+        self.metadata[prefix+'ztt_nminusone_bjetveto'] = 0
 
     def beginJob(self):
 	self.DMC = self.tags[0]
@@ -261,6 +266,7 @@ class zttModule(Module):
             self.out.branch(ver+"NJets","D")
             self.out.branch(ver+"PassPzeta","I")
             self.out.branch(ver+"PassMT","I")
+            self.out.branch(ver+"PassSel","I")
             if self.datamc == 'sigRes': 
               self.out.branch(ver+"DyDecayType","I")
         add_branches("AnaTau_")
@@ -537,28 +543,39 @@ class zttModule(Module):
             passBJetVetoBit = passBJetVeto()
             passMuVetoBit = passMuVeto(Index_muonobj)
             passDiMuVetoBit = passDiMuVeto()
-            passVetosBit = passEVetoBit and passBJetVetoBit and passMuVetoBit and passDiMuVetoBit
             passTriggerBit = passTrigger()
-            passBit = passEventFilter and passTriggerBit and passVetosBit and haveMuonAndTauCand and passDeltaR
+
+            passVetosBit = passEVetoBit and passBJetVetoBit and passMuVetoBit and passDiMuVetoBit
+            passAllButVetosBit = passEventFilter and passTriggerBit and haveMuonAndTauCand and passDeltaR and passMT and passPzeta
+            passAllButEventWideBit = passEventFilter and passTriggerBit and haveMuonAndTauCand and passDeltaR
+            passBit = passAllButVetosBit and passVetosBit
         
             # metadata
             self.metadata[prefix+'ztt_total'] += 1
-            if passTriggerBit:
-                self.metadata[prefix+'ztt_pass_trig'] += 1
-                if passVetosBit:
-                  self.metadata[prefix+'ztt_pass_allVeto'] += 1
-                  if haveMuonAndTauCand and passDeltaR:
-                    self.metadata[prefix+'ztt_pass_muAndTau'] += 1
-                    if passMT:
-                      self.metadata[prefix+'ztt_pass_MT'] += 1
-                      if passPzeta:
-                        self.metadata[prefix+'ztt_pass_fullsel'] += 1
-            if passEVetoBit: self.metadata[prefix+'ztt_passOnly_muVeto'] += 1
-            if passEVetoBit: self.metadata[prefix+'ztt_passOnly_elVeto'] += 1
-            if passEVetoBit: self.metadata[prefix+'ztt_passOnly_diMuVeto'] += 1
-            if passEVetoBit: self.metadata[prefix+'ztt_passOnly_bVeto'] += 1
 
-            if passBit:
+            if passMuVetoBit:    self.metadata[prefix+'ztt_passOnly_muVeto'] += 1
+            if passEVetoBit:     self.metadata[prefix+'ztt_passOnly_elVeto'] += 1
+            if passDiMuVetoBit:  self.metadata[prefix+'ztt_passOnly_diMuVeto'] += 1
+            if passBJetVetoBit:  self.metadata[prefix+'ztt_passOnly_bVeto'] += 1
+
+            if passAllButVetosBit and                  passBJetVetoBit and passMuVetoBit and passDiMuVetoBit: self.metadata[prefix+'ztt_nminusone_eveto'] += 1
+            if passAllButVetosBit and passEVetoBit and                     passMuVetoBit and passDiMuVetoBit: self.metadata[prefix+'ztt_nminusone_bjetveto'] += 1
+            if passAllButVetosBit and passEVetoBit and passBJetVetoBit and                   passDiMuVetoBit: self.metadata[prefix+'ztt_nminusone_muveto'] += 1
+            if passAllButVetosBit and passEVetoBit and passBJetVetoBit and passMuVetoBit                    : self.metadata[prefix+'ztt_nminusone_dimuveto'] += 1
+
+            if passVetosBit and passEventFilter and passTriggerBit and haveMuonAndTauCand and passDeltaR and            passPzeta: self.metadata[prefix+'ztt_nminusone_pzeta'] += 1
+            if passVetosBit and passEventFilter and passTriggerBit and haveMuonAndTauCand and passDeltaR and passMT              : self.metadata[prefix+'ztt_nminusone_mt'] += 1
+
+            if passTriggerBit: 
+                self.metadata[prefix+'ztt_flow_trig'] += 1
+                if passVetosBit:
+                    self.metadata[prefix+'ztt_flow_allveto'] += 1
+                    if passEventFilter and passTriggerBit and haveMuonAndTauCand and passDeltaR:
+                        self.metadata[prefix+'ztt_flow_muAndTau'] += 1
+                        if passMT and passPzeta:
+                            self.metadata[prefix+'ztt_flow_fullsel'] += 1
+
+            if passAllButEventWideBit:
               if ver == 'tau': taucand_obj = taus[Index_tauobj]
               if ver == 'tp': taucand_obj = twoprongs[Index_tauobj]
               if ver == 'tpm': taucand_obj = twoprongsmod[Index_tauobj]
@@ -600,6 +617,7 @@ class zttModule(Module):
               self.out.fillBranch(prefix+"NJets", nJets)
               self.out.fillBranch(prefix+"PassPzeta", passPzeta)
               self.out.fillBranch(prefix+"PassMT", passMT)
+              self.out.fillBranch(prefix+"PassSel", passBit)
               if self.datamc == 'sigRes':
                 self.out.fillBranch(prefix+"DyDecayType", get_dy_decay_type(genparticles))
               return True

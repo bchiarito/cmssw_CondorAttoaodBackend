@@ -620,6 +620,8 @@ class zttModule(Module):
               self.out.fillBranch(prefix+"PassSel", passBit)
               if self.datamc == 'sigRes':
                 self.out.fillBranch(prefix+"DyDecayType", get_dy_decay_type(genparticles))
+              else:
+                self.out.fillBranch(prefix+"DyDecayType", -3)
               return True
             else:
               self.out.fillBranch(prefix+"RegionIso", -2) # 1 = isolated, 2 = anti-isolated, -1 = fail
@@ -637,8 +639,11 @@ class zttModule(Module):
               self.out.fillBranch(prefix+"NJets", -1)
               self.out.fillBranch(prefix+"PassPzeta", -1)
               self.out.fillBranch(prefix+"PassMT", -1)
+              self.out.fillBranch(prefix+"PassSel", -1)
               if self.datamc == 'sigRes':
                 self.out.fillBranch(prefix+"DyDecayType", -2)
+              else:
+                self.out.fillBranch(prefix+"DyDecayType", -3)
               return False
         
         bit1 = fill_branches('tau')
